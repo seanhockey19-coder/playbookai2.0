@@ -14,10 +14,6 @@ interface MarketOption {
   valueScore: number;
 }
 
-interface ParlayBuilderProps {
-  game?: SimplifiedGame;
-}
-
 interface ParlayLeg {
   id: string;
   label: string;
@@ -25,8 +21,12 @@ interface ParlayLeg {
   type: string;
 }
 
+interface ParlayBuilderProps {
+  game?: SimplifiedGame;
+}
+
 // -------------------------------------------------------
-// PARLAY BUILDER COMPONENT
+// COMPONENT
 // -------------------------------------------------------
 export default function ParlayBuilder({ game }: ParlayBuilderProps) {
   const [legs, setLegs] = useState<ParlayLeg[]>([]);
@@ -49,12 +49,12 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
   }
 
   // -------------------------------------------------------
-  // BUILD AVAILABLE MARKETS FROM GAME DATA
+  // BUILD MARKETS
   // -------------------------------------------------------
   const buildMarkets = (): MarketOption[] => {
     const markets: MarketOption[] = [];
 
-    // ---- MONEYLINE ----
+    // ---------------- MONEYLINE ----------------
     game.h2h?.outcomes?.forEach((o) => {
       markets.push({
         id: `ML-${o.name}`,
@@ -65,22 +65,26 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
       });
     });
 
-    // ---- SPREADS ----
+    // ---------------- SPREADS ----------------
     game.spreads?.outcomes?.forEach((o) => {
+      const point = o.point ?? 0; // <-- FIXED SAFETY DEFAULT
+
       markets.push({
         id: `SP-${o.name}`,
-        label: `${o.name} ${o.point > 0 ? "+" : ""}${o.point}`,
+        label: `${o.name} ${point > 0 ? "+" : ""}${point}`,
         odds: o.price,
         type: "spread",
         valueScore: 1,
       });
     });
 
-    // ---- TOTALS ----
+    // ---------------- TOTALS ----------------
     game.totals?.outcomes?.forEach((o) => {
+      const point = o.point ?? 0; // <-- FIXED SAFETY DEFAULT
+
       markets.push({
         id: `TO-${o.name}`,
-        label: `${o.name.toUpperCase()} ${o.point}`,
+        label: `${o.name.toUpperCase()} ${point}`,
         odds: o.price,
         type: "total",
         valueScore: 1,
@@ -93,31 +97,28 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
   const marketOptions = buildMarkets();
 
   // -------------------------------------------------------
-  // ADD A LEG
+  // ADD LEG
   // -------------------------------------------------------
   const addLeg = (m: MarketOption) => {
-    const alreadyIn = legs.some((l) => l.id === m.id);
-    if (alreadyIn) return;
-
+    if (legs.some((l) => l.id === m.id)) return; // avoid duplicates
     setLegs((prev) => [...prev, m]);
   };
 
   // -------------------------------------------------------
-  // REMOVE A LEG
+  // REMOVE LEG
   // -------------------------------------------------------
   const removeLeg = (id: string) => {
     setLegs((prev) => prev.filter((l) => l.id !== id));
   };
 
   // -------------------------------------------------------
-  // CALCULATE TOTAL ODDS (American Format)
+  // TOTAL ODDS CALCULATION
   // -------------------------------------------------------
   const calculateTotalOdds = () => {
     if (legs.length === 0) return 0;
 
     const decimalLegs = legs.map((leg) => {
       const o = leg.odds;
-
       if (o > 0) return 1 + o / 100;
       return 1 + 100 / Math.abs(o);
     });
@@ -150,7 +151,7 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
         Parlay Builder – {game.homeTeam} vs {game.awayTeam}
       </h2>
 
-      {/* MARKET SELECTOR */}
+      {/* SELECT MARKET */}
       <div
         style={{
           background: "#1a1a1a",
@@ -159,9 +160,7 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
           marginBottom: "1rem",
         }}
       >
-        <h3 style={{ color: "#fff", marginBottom: "0.5rem" }}>
-          Add a Market to Your Parlay
-        </h3>
+        <h3>Add a Market</h3>
 
         <select
           onChange={(e) => {
@@ -187,9 +186,10 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
         </select>
       </div>
 
-      {/* CURRENT LEGS */}
+      {/* LEGS LIST */}
       <div>
         <h3>Your Legs ({legs.length})</h3>
+
         {legs.length === 0 && <div>No legs added yet.</div>}
 
         {legs.map((l) => (
@@ -204,6 +204,7 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
           >
             <strong>{l.label}</strong> — {l.odds}
             <button
+              onClick={() => removeLeg(l.id)}
               style={{
                 float: "right",
                 background: "red",
@@ -213,7 +214,6 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
                 cursor: "pointer",
                 borderRadius: "4px",
               }}
-              onClick={() => removeLeg(l.id)}
             >
               Remove
             </button>
