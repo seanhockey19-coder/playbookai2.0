@@ -1,70 +1,65 @@
+// components/Sidebar.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { ReactNode } from "react";
 
-const menuItems = [
-  { name: "Dashboard", href: "/dashboard" },
-  { name: "AI Picks", href: "/picks" },
-  { name: "Ladder Challenge", href: "/ladder" },
-  { name: "Game Breakdown", href: "/breakdown" },
-  { name: "Player Props", href: "/props" },
+interface NavItem {
+  label: string;
+  href: string;
+}
+
+const navItems: NavItem[] = [
+  { label: "Dashboard", href: "/" },
+  { label: "AI Picks", href: "/ai-picks" },
+  { label: "Ladder Challenge", href: "/ladder-challenge" },
+  { label: "Game Breakdown", href: "/game-breakdown" },
+  { label: "Player Props", href: "/player-props" },
 ];
 
-export default function Sidebar() {
-  const pathname = usePathname() || ""; // ✅ Prevents null issues
-  const [open, setOpen] = useState(false);
+function NavLink({ item }: { item: NavItem }) {
+  const pathname = usePathname();
+  const isActive =
+    item.href === "/"
+      ? pathname === "/"
+      : pathname.startsWith(item.href);
 
   return (
-    <aside
-      style={{
-        width: "240px",
-        height: "100vh",
-        background: "#0a0f1a",
-        borderRight: "1px solid #111a2b",
-        padding: "1rem",
-        position: "fixed",
-        left: 0,
-        top: 0,
-      }}
+    <Link
+      href={item.href}
+      className={`block rounded-lg px-4 py-2 text-sm font-medium transition
+        ${isActive
+          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/60"
+          : "text-slate-200/80 hover:bg-slate-800 hover:text-slate-50"}
+      `}
     >
-      <h2
-        style={{
-          fontSize: "1.4rem",
-          marginBottom: "1.5rem",
-          color: "#00f2ff",
-          fontWeight: 700,
-        }}
-      >
-        Coaches PlaybookAI
-      </h2>
+      {item.label}
+    </Link>
+  );
+}
 
-      <nav style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {menuItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+export function Sidebar(): ReactNode {
+  return (
+    <aside className="hidden md:flex md:flex-col w-64 bg-slate-950 border-r border-slate-800/80">
+      <div className="px-5 pt-6 pb-4 border-b border-slate-800/70">
+        <div className="text-xs font-semibold tracking-wide text-cyan-400">
+          Coaches
+        </div>
+        <div className="text-lg font-bold tracking-tight text-slate-50">
+          PlaybookAI
+        </div>
+      </div>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                padding: "0.75rem 1rem",
-                borderRadius: "8px",
-                background: isActive ? "#00f2ff22" : "transparent",
-                border: isActive ? "1px solid #00f2ff66" : "1px solid transparent",
-                color: isActive ? "#00f2ff" : "#d6e2ff",
-                fontWeight: isActive ? 700 : 400,
-                transition: "0.2s",
-              }}
-            >
-              {item.name}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 space-y-1">
+        {navItems.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
       </nav>
+
+      <div className="px-4 py-4 border-t border-slate-800/70 text-[11px] text-slate-500">
+        Alpha build • internal use only
+      </div>
     </aside>
   );
 }
