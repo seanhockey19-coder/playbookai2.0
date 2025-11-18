@@ -1,54 +1,22 @@
-"use client";
+import type { SimplifiedGame } from "@/app/api/nfl/odds/route";
 
-import { getGameBreakdown } from "@/lib/gameBreakdown";
-
-export default function GameBreakdown({ game }) {
+export default function GameBreakdown({ game }: { game?: SimplifiedGame }) {
   if (!game) return null;
-
-  const breakdown = getGameBreakdown(game);
-
-  if (!breakdown) return null;
 
   return (
     <div
       style={{
+        background: "#141414",
         padding: "1rem",
-        background: "#111",
-        borderRadius: "10px",
-        color: "#0ff",
-        marginBottom: "1.5rem",
+        borderRadius: "8px",
+        border: "1px solid #333",
+        marginTop: "1rem",
       }}
     >
-      <h2 style={{ marginBottom: "0.5rem" }}>🧠 AI Game Breakdown</h2>
-
-      <p>
-        <strong>{game.homeTeam} Win Probability:</strong>{" "}
-        {breakdown.homeProb}%
-      </p>
-      <p>
-        <strong>{game.awayTeam} Win Probability:</strong>{" "}
-        {breakdown.awayProb}%
-      </p>
-
-      <p>
-        <strong>Projected Total:</strong> {breakdown.projectedTotal}
-      </p>
-
-      <p>
-        <strong>Pace of Play:</strong> {breakdown.pace}
-      </p>
-
-      <p>
-        <strong>Suggested Side:</strong> {breakdown.bestSide}
-      </p>
-
-      <p>
-        <strong>Suggested Total:</strong> {breakdown.totalSide}
-      </p>
-
-      <p style={{ marginTop: "1rem", opacity: 0.8 }}>
-        {breakdown.summary}
-      </p>
+      <h2 style={{ color: "#0ff", marginBottom: "0.5rem" }}>
+        {game.awayTeam} @ {game.homeTeam}
+      </h2>
+      <p style={{ color: "#aaa" }}>Kickoff: {game.commenceTime}</p>
     </div>
   );
 }
