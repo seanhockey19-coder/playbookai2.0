@@ -1,4 +1,3 @@
-// components/Sidebar.tsx
 "use client";
 
 import Link from "next/link";
@@ -20,18 +19,24 @@ const navItems: NavItem[] = [
 
 function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
+
+  // ✅ Fix: handle strict null check
+  const safePath = pathname ?? "/";
+
   const isActive =
     item.href === "/"
-      ? pathname === "/"
-      : pathname.startsWith(item.href);
+      ? safePath === "/"
+      : safePath.startsWith(item.href);
 
   return (
     <Link
       href={item.href}
       className={`block rounded-lg px-4 py-2 text-sm font-medium transition
-        ${isActive
-          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/60"
-          : "text-slate-200/80 hover:bg-slate-800 hover:text-slate-50"}
+        ${
+          isActive
+            ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/60"
+            : "text-slate-200/80 hover:bg-slate-800 hover:text-slate-50"
+        }
       `}
     >
       {item.label}
