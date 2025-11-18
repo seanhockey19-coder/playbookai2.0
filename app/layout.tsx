@@ -1,47 +1,25 @@
 // app/layout.tsx
-import "./globals.css";
 import type { Metadata } from "next";
-import Sidebar from "./components/Sidebar";
+import "./globals.css";
+import { ReactNode } from "react";
+import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "CoachesPlaybookAI",
-  description: "AI-powered NFL & NBA betting assistant",
+  description: "NFL / NBA prop and ladder tools",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          padding: 0,
-          background: "#020409",
-          color: "#ffffff",
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            minHeight: "100vh",
-          }}
-        >
+      <body className="bg-slate-950 text-slate-100">
+        <div className="min-h-screen flex">
+          {/* LEFT NAV */}
           <Sidebar />
 
-          <main
-            style={{
-              flex: 1,
-              padding: "2rem 2.5rem",
-              maxWidth: "1300px",
-              margin: "0 auto",
-            }}
-          >
-            {children}
+          {/* MAIN CONTENT */}
+          <main className="flex-1 min-h-screen overflow-y-auto px-6 py-6">
+            <div className="max-w-7xl mx-auto">{children}</div>
           </main>
         </div>
       </body>
