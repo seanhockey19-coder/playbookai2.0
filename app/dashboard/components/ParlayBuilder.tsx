@@ -3,9 +3,6 @@
 import { useState } from "react";
 import type { SimplifiedGame } from "@/app/api/nfl/odds/route";
 
-// -------------------------------------------------------
-// TYPES
-// -------------------------------------------------------
 interface MarketOption {
   id: string;
   label: string;
@@ -21,40 +18,15 @@ interface ParlayLeg {
   type: string;
 }
 
-interface ParlayBuilderProps {
-  game?: SimplifiedGame;
-}
-
-// -------------------------------------------------------
-// COMPONENT
-// -------------------------------------------------------
-export default function ParlayBuilder({ game }: ParlayBuilderProps) {
+export default function ParlayBuilder({ game }: { game?: SimplifiedGame }) {
   const [legs, setLegs] = useState<ParlayLeg[]>([]);
 
-  if (!game) {
-    return (
-      <div
-        style={{
-          padding: "1rem",
-          background: "#111",
-          borderRadius: "8px",
-          border: "1px solid #333",
-          color: "white",
-        }}
-      >
-        <h2>Parlay Builder</h2>
-        <div>No game selected</div>
-      </div>
-    );
-  }
+  if (!game) return null;
 
-  // -------------------------------------------------------
-  // BUILD MARKETS
-  // -------------------------------------------------------
   const buildMarkets = (): MarketOption[] => {
     const markets: MarketOption[] = [];
 
-    // ---------------- MONEYLINE ----------------
+    // MONEYLINE
     game.h2h?.outcomes?.forEach((o) => {
       markets.push({
         id: `ML-${o.name}`,
@@ -65,9 +37,9 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
       });
     });
 
-    // ---------------- SPREADS ----------------
+    // SPREADS
     game.spreads?.outcomes?.forEach((o) => {
-      const point = o.point ?? 0; // <-- FIXED SAFETY DEFAULT
+      const point = o.point ?? 0;
 
       markets.push({
         id: `SP-${o.name}`,
@@ -78,9 +50,9 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
       });
     });
 
-    // ---------------- TOTALS ----------------
+    // TOTALS
     game.totals?.outcomes?.forEach((o) => {
-      const point = o.point ?? 0; // <-- FIXED SAFETY DEFAULT
+      const point = o.point ?? 0;
 
       markets.push({
         id: `TO-${o.name}`,
@@ -94,134 +66,97 @@ export default function ParlayBuilder({ game }: ParlayBuilderProps) {
     return markets;
   };
 
-  const marketOptions = buildMarkets();
-
-  // -------------------------------------------------------
-  // ADD LEG
-  // -------------------------------------------------------
   const addLeg = (m: MarketOption) => {
-    if (legs.some((l) => l.id === m.id)) return; // avoid duplicates
+    if (legs.some((l) => l.id === m.id)) return;
     setLegs((prev) => [...prev, m]);
   };
 
-  // -------------------------------------------------------
-  // REMOVE LEG
-  // -------------------------------------------------------
   const removeLeg = (id: string) => {
     setLegs((prev) => prev.filter((l) => l.id !== id));
   };
 
-  // -------------------------------------------------------
-  // TOTAL ODDS CALCULATION
-  // -------------------------------------------------------
   const calculateTotalOdds = () => {
     if (legs.length === 0) return 0;
 
-    const decimalLegs = legs.map((leg) => {
-      const o = leg.odds;
-      if (o > 0) return 1 + o / 100;
-      return 1 + 100 / Math.abs(o);
-    });
+    const decimalLegs = legs.map((leg) =>
+      leg.odds > 0 ? 1 + leg.odds / 100 : 1 + 100 / Math.abs(leg.odds)
+    );
 
-    const decimalTotal = decimalLegs.reduce((acc, val) => acc * val, 1);
+    const decimalTotal = decimalLegs.reduce((a, b) => a * b, 1);
 
-    if (decimalTotal >= 2) {
-      return Math.round((decimalTotal - 1) * 100);
-    } else {
-      return Math.round(-100 / (decimalTotal - 1));
-    }
+    return decimalTotal >= 2
+      ? Math.round((decimalTotal - 1) * 100)
+      : Math.round(-100 / (decimalTotal - 1));
   };
 
+  const markets = buildMarkets();
   const totalOdds = calculateTotalOdds();
 
-  // -------------------------------------------------------
-  // UI
-  // -------------------------------------------------------
   return (
     <div
       style={{
-        padding: "1rem",
         background: "#111",
+        padding: "1rem",
         borderRadius: "8px",
         border: "1px solid #333",
         color: "white",
       }}
     >
-      <h2 style={{ color: "#0ff", marginBottom: "1rem" }}>
+      <h3 style={{ color: "#0ff" }}>
         Parlay Builder – {game.homeTeam} vs {game.awayTeam}
-      </h2>
+      </h3>
 
-      {/* SELECT MARKET */}
-      <div
+      <select
+        onChange={(e) => {
+          const selected = markets.find((m) => m.id === e.target.value);
+          if (selected) addLeg(selected);
+        }}
         style={{
-          background: "#1a1a1a",
-          padding: "1rem",
-          borderRadius: "6px",
+          width: "100%",
+          padding: "0.7rem",
+          borderRadius: "4px",
+          background: "#000",
+          color: "white",
+          border: "1px solid #333",
           marginBottom: "1rem",
         }}
       >
-        <h3>Add a Market</h3>
+        <option value="">Add a market…</option>
+        {markets.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.label} ({m.odds})
+          </option>
+        ))}
+      </select>
 
-        <select
-          onChange={(e) => {
-            const id = e.target.value;
-            const selected = marketOptions.find((m) => m.id === id);
-            if (selected) addLeg(selected);
-          }}
+      {legs.map((l) => (
+        <div
+          key={l.id}
           style={{
-            width: "100%",
-            padding: "0.7rem",
-            borderRadius: "4px",
-            background: "#000",
-            color: "white",
-            border: "1px solid #333",
+            background: "#222",
+            padding: "0.8rem",
+            borderRadius: "6px",
+            marginBottom: "0.5rem",
           }}
         >
-          <option value="">Choose a market…</option>
-          {marketOptions.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label} ({m.odds})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* LEGS LIST */}
-      <div>
-        <h3>Your Legs ({legs.length})</h3>
-
-        {legs.length === 0 && <div>No legs added yet.</div>}
-
-        {legs.map((l) => (
-          <div
-            key={l.id}
+          <strong>{l.label}</strong> — {l.odds}
+          <button
+            onClick={() => removeLeg(l.id)}
             style={{
-              background: "#222",
-              padding: "0.8rem",
-              borderRadius: "6px",
-              marginBottom: "0.5rem",
+              float: "right",
+              background: "red",
+              color: "white",
+              border: "none",
+              padding: "0.3rem 0.6rem",
+              cursor: "pointer",
+              borderRadius: "4px",
             }}
           >
-            <strong>{l.label}</strong> — {l.odds}
-            <button
-              onClick={() => removeLeg(l.id)}
-              style={{
-                float: "right",
-                background: "red",
-                color: "white",
-                border: "none",
-                padding: "0.3rem 0.6rem",
-                cursor: "pointer",
-                borderRadius: "4px",
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
+            Remove
+          </button>
+        </div>
+      ))}
 
-      {/* TOTAL ODDS */}
       <div
         style={{
           marginTop: "1rem",
