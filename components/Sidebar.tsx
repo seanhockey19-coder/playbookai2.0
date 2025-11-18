@@ -19,8 +19,6 @@ const navItems: NavItem[] = [
 
 function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
-
-  // ✅ Fix: handle strict null check
   const safePath = pathname ?? "/";
 
   const isActive =
@@ -46,7 +44,7 @@ function NavLink({ item }: { item: NavItem }) {
 
 export function Sidebar(): ReactNode {
   return (
-    <aside className="hidden md:flex md:flex-col w-64 bg-slate-950 border-r border-slate-800/80">
+    <aside className="hidden md:flex md:flex-col w-64 bg-slate-950 border-r border-slate-800/80 fixed inset-y-0 left-0 z-40">
       <div className="px-5 pt-6 pb-4 border-b border-slate-800/70">
         <div className="text-xs font-semibold tracking-wide text-cyan-400">
           Coaches
@@ -56,7 +54,7 @@ export function Sidebar(): ReactNode {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink key={item.href} item={item} />
         ))}
