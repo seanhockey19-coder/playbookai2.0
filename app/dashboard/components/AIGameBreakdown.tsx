@@ -1,14 +1,15 @@
 "use client";
 
 interface SimplifiedGame {
+  id?: string;
   homeTeam: string;
   awayTeam: string;
-  homeWinPct: number;
-  awayWinPct: number;
-  projectedPoints: number;
-  pace: string;
+  homeWinPct?: number;
+  awayWinPct?: number;
+  projectedPoints?: number;
+  pace?: string;
 
-  // Odds shape is not consistent — so we allow optional fields
+  // Total line may exist in multiple places depending on API response
   totalLine?: number;
   total?: number;
   overUnder?: number;
@@ -17,24 +18,46 @@ interface SimplifiedGame {
   };
 }
 
-export default function AIGameBreakdown({ game }: { game: SimplifiedGame }) {
-  if (!game) {
+export default function AIGameBreakdown({
+  game,
+  loading,
+}: {
+  game: SimplifiedGame | null;   // ✅ FIXED (accept null)
+  loading: boolean;
+}) {
+  if (loading) {
     return (
       <div
         style={{
-          padding: "1rem",
-          border: "1px solid #112233",
-          background: "#0c101b",
-          borderRadius: "10px",
-          color: "#789",
+          background: "#050910",
+          padding: "1.3rem",
+          borderRadius: "1rem",
+          border: "1px solid #151a23",
+          color: "#8899aa",
         }}
       >
-        No game selected.
+        Loading AI breakdown…
       </div>
     );
   }
 
-  // ✅ Safe resolver for total line
+  if (!game) {
+    return (
+      <div
+        style={{
+          background: "#050910",
+          padding: "1.3rem",
+          borderRadius: "1rem",
+          border: "1px solid #151a23",
+          color: "#8899aa",
+        }}
+      >
+        Select a game to see breakdown.
+      </div>
+    );
+  }
+
+  // ✅ Safely resolve total line, no matter where it exists
   const resolvedTotal =
     game.totalLine ??
     game.total ??
@@ -45,66 +68,91 @@ export default function AIGameBreakdown({ game }: { game: SimplifiedGame }) {
   return (
     <div
       style={{
-        background: "#0a0f1a",
-        padding: "1.4rem",
-        borderRadius: "12px",
-        border: "1px solid #112233",
-        color: "white",
+        background: "#050910",
+        borderRadius: "1rem",
+        border: "1px solid #151a23",
+        padding: "1.1rem 1.2rem",
+        minHeight: "240px",
       }}
     >
-      <h3
+      <h2
         style={{
-          color: "#00f2ff",
-          fontSize: "1.2rem",
-          marginBottom: "1rem",
-          fontWeight: 700,
+          fontSize: "0.95rem",
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: "#7f8aa3",
+          marginBottom: "0.7rem",
         }}
       >
-        AI Game Breakdown
-      </h3>
+        AI GAME BREAKDOWN
+      </h2>
 
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
+          gap: "1.2rem",
           marginBottom: "1.2rem",
         }}
       >
         <div>
-          <div style={{ fontSize: "1.1rem", color: "#00f2ff" }}>
-            {game.homeTeam}
+          <div
+            style={{
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              color: "#7f8aa3",
+              marginBottom: "0.2rem",
+            }}
+          >
+            Away
           </div>
-          <div style={{ fontSize: "2rem" }}>{game.homeWinPct}%</div>
-        </div>
-
-        <div>
-          <div style={{ fontSize: "1.1rem", color: "#00f2ff" }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>
             {game.awayTeam}
           </div>
-          <div style={{ fontSize: "2rem" }}>{game.awayWinPct}%</div>
+        </div>
+
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              color: "#7f8aa3",
+              marginBottom: "0.2rem",
+            }}
+          >
+            Projected Total
+          </div>
+          <div style={{ fontSize: "1.4rem", color: "#00f2ff" }}>
+            {resolvedTotal}
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              color: "#7f8aa3",
+              marginBottom: "0.2rem",
+            }}
+          >
+            Home
+          </div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+            {game.homeTeam}
+          </div>
         </div>
       </div>
 
-      <div
-        style={{
-          borderTop: "1px solid #112233",
-          paddingTop: "1rem",
-          marginTop: "1rem",
-        }}
-      >
-        <div style={{ marginBottom: "0.8rem" }}>
-          <strong>Projected Points:</strong> {game.projectedPoints}
-        </div>
-
-        <div style={{ marginBottom: "0.8rem" }}>
-          <strong>Pace:</strong> {game.pace}
-        </div>
-
-        <div>
-          <strong>Total Line:</strong>{" "}
-          <span style={{ color: "#00f2ff" }}>{resolvedTotal}</span>
-        </div>
-      </div>
+      <p style={{ fontSize: "0.9rem", color: "#b1bdd8", lineHeight: 1.45 }}>
+        {game.awayTeam} and {game.homeTeam} match up in a game that currently
+        profiles as{" "}
+        <span style={{ color: "#00f2ff" }}>high pace</span>, with market totals
+        sitting around{" "}
+        <span style={{ color: "#00f2ff" }}>{resolvedTotal}</span>. This panel
+        updates live as the AI evaluates shifts in moneyline, spread, and total
+        pricing.
+      </p>
     </div>
   );
 }
