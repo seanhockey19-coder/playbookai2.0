@@ -2,13 +2,21 @@ export const metadata = {
   title: "CoachesPlaybookAI – Dashboard",
 };
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      display: "flex",
-      minHeight: "100vh",
-      background: "#0b0b0d",
-      color: "white"
+    <div
+      style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "2rem 1rem",
+        color: "white",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
     }}>
       <aside style={{
         width: "240px",
@@ -34,3 +42,4 @@ export default function DashboardLayout({ children }) {
     </div>
   );
 }
+
