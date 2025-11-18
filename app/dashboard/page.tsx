@@ -15,9 +15,11 @@ export default function DashboardPage() {
   const [games, setGames] = useState<SimplifiedGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [propsData, setPropsData] = useState<any[]>([]);
+  const [propsLoading, setPropsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch live games
+  // Fetch games
   useEffect(() => {
     const loadGames = async () => {
       try {
@@ -41,16 +43,14 @@ export default function DashboardPage() {
 
   const selectedGame = games.find((g) => g.id === selectedGameId);
 
-  // Fetch props for selected game
-  const [propsData, setPropsData] = useState<any[]>([]);
-  const [loadingProps, setLoadingProps] = useState(false);
-
+  // Fetch props
   useEffect(() => {
     if (!selectedGame) return;
 
     const loadProps = async () => {
       try {
-        setLoadingProps(true);
+        setPropsLoading(true);
+
         const params = new URLSearchParams({
           home: selectedGame.homeTeam,
           away: selectedGame.awayTeam,
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       } catch {
         setPropsData([]);
       } finally {
-        setLoadingProps(false);
+        setPropsLoading(false);
       }
     };
 
@@ -72,7 +72,13 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: "2rem", color: "#00f2ff", marginBottom: "1.5rem" }}>
+      <h1
+        style={{
+          fontSize: "2rem",
+          color: "#00f2ff",
+          marginBottom: "1.5rem",
+        }}
+      >
         Coaches Playbook – Dashboard
       </h1>
 
@@ -85,7 +91,6 @@ export default function DashboardPage() {
         onChange={setSelectedGameId}
       />
 
-      {/* GAME SUMMARY */}
       {selectedGame && <GameBreakdown game={selectedGame} />}
 
       {/* GRID */}
@@ -102,7 +107,7 @@ export default function DashboardPage() {
         <PropsCard
           game={selectedGame}
           propsData={propsData}
-          loading={loadingProps}
+          loading={propsLoading}
         />
 
         <ParlayBuilder game={selectedGame} />
