@@ -1,52 +1,43 @@
-import type { SimplifiedGame } from "../../api/nfl/odds/route";
-
-interface GameSelectorProps {
-  games: SimplifiedGame[];
-  selectedGameId: string | null;
-  onChange: (id: string) => void;
-}
+import type { SimplifiedGame } from "@/app/api/nfl/odds/route";
 
 export default function GameSelector({
   games,
   selectedGameId,
   onChange,
-}: GameSelectorProps) {
+}: {
+  games: SimplifiedGame[];
+  selectedGameId: string | null;
+  onChange: (id: string) => void;
+}) {
   return (
     <div
       style={{
-        padding: "1rem",
+        marginBottom: "1.5rem",
         background: "#111",
+        padding: "1rem",
         borderRadius: "8px",
-        marginBottom: "2rem",
+        border: "1px solid #333",
       }}
     >
-      <h2 style={{ color: "#0ff", marginBottom: "1rem" }}>Select Game</h2>
+      <h3 style={{ color: "#0ff", marginBottom: "0.5rem" }}>Select Game</h3>
 
       <select
+        value={selectedGameId ?? ""}
+        onChange={(e) => onChange(e.target.value)}
         style={{
           width: "100%",
           padding: "0.8rem",
           background: "#1a1a1a",
           color: "white",
+          border: "1px solid #444",
           borderRadius: "6px",
-          border: "1px solid #333",
         }}
-        value={selectedGameId ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={games.length === 0}
       >
-        {games.length === 0 && <option>No upcoming games found</option>}
-
-        {games.length > 0 && (
-          <>
-            <option value="">Choose a matchup…</option>
-            {games.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.awayTeam} @ {g.homeTeam}
-              </option>
-            ))}
-          </>
-        )}
+        {games.map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.awayTeam} @ {g.homeTeam}
+          </option>
+        ))}
       </select>
     </div>
   );
