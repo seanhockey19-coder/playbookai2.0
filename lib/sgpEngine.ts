@@ -1,21 +1,23 @@
-export function generateBestSGP(game) {
-  if (!game) return [];
+// Utility: Convert American odds → implied probability
+export const impliedProb = (odds: number): number => {
+  if (odds > 0) return 100 / (100 + odds);
+  return Math.abs(odds) / (100 + Math.abs(odds));
+};
 
-  const impliedProb = (odds) => {
-    if (odds < 0) return Math.abs(odds) / (Math.abs(odds) + 100);
-    return 100 / (odds + 100);
-  };
+interface SGPCandidate {
+  label: string;
+  odds: number;
+  prob: number;
+  value: number;
+  category: string;
+}
 
-  const valueScore = (prob, juice) => {
-    const efficiency = prob - impliedProb(juice);
-    return Math.max(0, Math.min(100, Math.round(efficiency * 250 + 50)));
-  };
+export const generateBestSGP = (game: any) => {
+  const candidates: SGPCandidate[] = []; // <-- FIXED TYPING
 
   const ml = game.h2h?.outcomes || [];
   const spreads = game.spreads?.outcomes || [];
   const totals = game.totals?.outcomes || [];
-
-  const candidates = [];
 
   ml.forEach((o) => {
     const prob = impliedProb(o.price);
@@ -23,35 +25,39 @@ export function generateBestSGP(game) {
       label: `${o.name} ML`,
       odds: o.price,
       prob,
-      value: valueScore(prob, o.price),
+      value: prob * 100,
       category: "moneyline",
     });
   });
 
   spreads.forEach((o) => {
     const point = o.point ?? 0;
-    const formatted = o.point == null ? "PK" : `${point > 0 ? "+" : ""}${point}`;
     const prob = impliedProb(o.price);
-
     candidates.push({
-      label: `${o.name} ${formatted}`,
+      label: `${o.name} ${point > 0 ? "+" : ""}${point}`,
       odds: o.price,
       prob,
-      value: valueScore(prob, o.price),
+      value: prob * 100,
       category: "spread",
     });
   });
 
   totals.forEach((o) => {
+    const point = o.point ?? 0;
     const prob = impliedProb(o.price);
     candidates.push({
-      label: `${o.name} ${o.point}`,
+      label: `${o.name} ${point}`,
       odds: o.price,
       prob,
-      value: valueScore(prob, o.price),
+      value: prob * 100,
       category: "total",
     });
   });
+
+  // sort highest value → lowest
+  return candidates.sort((a, b) => b.value - a.value);
+};
+
 
   const sorted = candidates
     .map((c) => ({ ...c, score: c.value + c.prob * 100 }))
@@ -70,3 +76,4 @@ export function generateBestSGP(game) {
 
   return build.slice(0, 3);
 }
+
