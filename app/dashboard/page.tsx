@@ -1,120 +1,144 @@
+// app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import GameSelector from "./components/GameSelector";
-import GameBreakdown from "./components/GameBreakdown";
-import OddsCard from "./components/OddsCard";
-import PropsCard from "./components/PropsCard";
-import ParlayBuilder from "./components/ParlayBuilder";
-import LadderGenerator from "./components/LadderGenerator";
-import PlayerSelector from "./components/PlayerSelector";
-
 import type { SimplifiedGame } from "../api/nfl/odds/route";
+import GameSelector from "./components/GameSelector";
+import AIGameBreakdown from "./components/AIGameBreakdown";
+import AILineValueScan from "./components/AILineValueScan";
+import OddsPanel from "./components/OddsPanel";
+import GamePropsPanel from "./components/GamePropsPanel";
+import LadderMiniPanel from "./components/LadderMiniPanel";
 
 export default function DashboardPage() {
   const [games, setGames] = useState<SimplifiedGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [propsData, setPropsData] = useState<any[]>([]);
-  const [propsLoading, setPropsLoading] = useState(false);
+  const [loadingGames, setLoadingGames] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch games
+  const selectedGame = games.find((g) => g.id === selectedGameId) ?? null;
+
+  // Load games on mount
   useEffect(() => {
-    const loadGames = async () => {
+    const load = async () => {
       try {
-        setLoading(true);
+        setLoadingGames(true);
+        setError(null);
+
         const res = await fetch("/api/nfl/odds");
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || "Failed to load odds");
-
-        setGames(data.events || []);
-        setSelectedGameId(data.events?.[0]?.id ?? null);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadGames();
-  }, []);
-
-  const selectedGame = games.find((g) => g.id === selectedGameId);
-
-  // Fetch props
-  useEffect(() => {
-    if (!selectedGame) return;
-
-    const loadProps = async () => {
-      try {
-        setPropsLoading(true);
-
-        const params = new URLSearchParams({
-          home: selectedGame.homeTeam,
-          away: selectedGame.awayTeam,
-        });
-
-        const res = await fetch(`/api/nfl/props?${params}`);
         const json = await res.json();
 
-        setPropsData(json.props || []);
-      } catch {
-        setPropsData([]);
+        if (!res.ok) {
+          throw new Error(json.error || "Failed to load odds");
+        }
+
+        const events: SimplifiedGame[] = json.events || [];
+        setGames(events);
+        if (events.length > 0) {
+          setSelectedGameId(events[0].id);
+        }
+      } catch (err: any) {
+        setError(err.message || "Something went wrong.");
       } finally {
-        setPropsLoading(false);
+        setLoadingGames(false);
       }
     };
 
-    loadProps();
-  }, [selectedGameId]);
+    load();
+  }, []);
 
   return (
     <div>
       <h1
         style={{
-          fontSize: "2rem",
+          fontSize: "2.1rem",
+          fontWeight: 700,
           color: "#00f2ff",
-          marginBottom: "1.5rem",
+          marginBottom: "0.4rem",
         }}
       >
-        Coaches Playbook – Dashboard
+        AI NFL Dashboard
       </h1>
+      <p style={{ color: "#7f8aa3", marginBottom: "1.5rem" }}>
+        Live market breakdown, AI picks, line value scan & props for today&apos;s
+        games.
+      </p>
 
-      {loading && <p>Loading live odds…</p>}
-      {error && <p style={{ color: "salmon" }}>{error}</p>}
+      {error && (
+        <div style={{ color: "#ff8b7f", marginBottom: "1rem" }}>{error}</div>
+      )}
 
       <GameSelector
         games={games}
         selectedGameId={selectedGameId}
         onChange={setSelectedGameId}
+        loading={loadingGames}
       />
 
-      {selectedGame && <GameBreakdown game={selectedGame} />}
-
-      {/* GRID */}
+      {/* GRID LAYOUT */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-          gap: "1.5rem",
-          marginTop: "2rem",
+          gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
+          gap: "1.4rem",
+          alignItems: "flex-start",
         }}
       >
-        <OddsCard game={selectedGame} />
+        {/* Left column big breakdown */}
+        <AIGameBreakdown game={selectedGame} loading={loadingGames} />
 
-        <PropsCard
-          game={selectedGame}
-          propsData={propsData}
-          loading={propsLoading}
-        />
+        {/* Right column odds */}
+        <OddsPanel game={selectedGame} />
+      </div>
 
-        <ParlayBuilder game={selectedGame} />
+      <div
+        style={{
+          marginTop: "1.4rem",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
+          gap: "1.4rem",
+          alignItems: "flex-start",
+        }}
+      >
+        <AILineValueScan game={selectedGame} />
+        <GamePropsPanel game={selectedGame} />
+      </div>
 
-        <LadderGenerator />
-
-        <PlayerSelector />
+      <div
+        style={{
+          marginTop: "1.4rem",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
+          gap: "1.4rem",
+        }}
+      >
+        <LadderMiniPanel />
+        {/* Placeholder spot where we’ll later add: mini AI Picks for this game */}
+        <div
+          style={{
+            background: "#070b13",
+            borderRadius: "1rem",
+            border: "1px solid #161c26",
+            padding: "1rem 1.1rem",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1rem",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              color: "#7f8aa3",
+              marginBottom: "0.7rem",
+            }}
+          >
+            AI PICKS FEED
+          </h2>
+          <p style={{ color: "#65708a", fontSize: "0.9rem" }}>
+            Full multi-game AI picks feed lives on the{" "}
+            <span style={{ color: "#00f2ff" }}>Coaches AI Picks</span> page.
+            We&apos;ll also surface game-specific picks here in the next pass.
+          </p>
+        </div>
       </div>
     </div>
   );
