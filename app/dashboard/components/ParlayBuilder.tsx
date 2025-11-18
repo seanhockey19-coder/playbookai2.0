@@ -1,185 +1,236 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import BestSGPButton from "./BestSGPButton";
-import { generateBestSGP } from "@/lib/sgpEngine";
+import { useState } from "react";
+import type { SimplifiedGame } from "@/app/api/nfl/odds/route";
 
-export default function ParlayBuilder({ game, propsData = [] }) {
-  const [markets, setMarkets] = useState([]);
-  const [selectedLegs, setSelectedLegs] = useState([]);
-  const [aiSGP, setAiSGP] = useState([]);
+// -------------------------------------------------------
+// TYPES
+// -------------------------------------------------------
+interface MarketOption {
+  id: string;
+  label: string;
+  odds: number;
+  type: "moneyline" | "spread" | "total";
+  valueScore: number;
+}
 
-  // -----------------------------------------
-  // Build markets (ML / Spread / Total / Props)
-  // -----------------------------------------
-  useEffect(() => {
-    if (!game) return;
+interface ParlayBuilderProps {
+  game?: SimplifiedGame;
+}
 
-    const newMarkets = [];
+interface ParlayLeg {
+  id: string;
+  label: string;
+  odds: number;
+  type: string;
+}
 
-    // Convert American odds → implied probability
-    const impliedProb = (odds) => {
-      if (odds < 0) return Math.abs(odds) / (Math.abs(odds) + 100);
-      return 100 / (odds + 100);
-    };
+// -------------------------------------------------------
+// PARLAY BUILDER COMPONENT
+// -------------------------------------------------------
+export default function ParlayBuilder({ game }: ParlayBuilderProps) {
+  const [legs, setLegs] = useState<ParlayLeg[]>([]);
 
-    // -------------------------------
-    // Moneyline
-    // -------------------------------
+  if (!game) {
+    return (
+      <div
+        style={{
+          padding: "1rem",
+          background: "#111",
+          borderRadius: "8px",
+          border: "1px solid #333",
+          color: "white",
+        }}
+      >
+        <h2>Parlay Builder</h2>
+        <div>No game selected</div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------
+  // BUILD AVAILABLE MARKETS FROM GAME DATA
+  // -------------------------------------------------------
+  const buildMarkets = (): MarketOption[] => {
+    const markets: MarketOption[] = [];
+
+    // ---- MONEYLINE ----
     game.h2h?.outcomes?.forEach((o) => {
-      newMarkets.push({
+      markets.push({
         id: `ML-${o.name}`,
         label: `${o.name} ML`,
         odds: o.price,
         type: "moneyline",
-        valueScore: Math.round(impliedProb(o.price) * 100),
+        valueScore: 1,
       });
     });
 
-    // -------------------------------
-    // Spread
-    // -------------------------------
+    // ---- SPREADS ----
     game.spreads?.outcomes?.forEach((o) => {
-      const point = o.point ?? 0;
-      const formattedPoint = o.point == null ? "PK" : `${point > 0 ? "+" : ""}${point}`;
-
-      newMarkets.push({
-        id: `Spread-${o.name}`,
-        label: `${o.name} ${formattedPoint}`,
+      markets.push({
+        id: `SP-${o.name}`,
+        label: `${o.name} ${o.point > 0 ? "+" : ""}${o.point}`,
         odds: o.price,
         type: "spread",
-        valueScore: Math.round(impliedProb(o.price) * 100),
+        valueScore: 1,
       });
     });
 
-    // -------------------------------
-    // Totals
-    // -------------------------------
+    // ---- TOTALS ----
     game.totals?.outcomes?.forEach((o) => {
-      newMarkets.push({
-        id: `Total-${o.name}`,
-        label: `${o.name} ${o.point}`,
+      markets.push({
+        id: `TO-${o.name}`,
+        label: `${o.name.toUpperCase()} ${o.point}`,
         odds: o.price,
         type: "total",
-        valueScore: Math.round(impliedProb(o.price) * 100),
+        valueScore: 1,
       });
     });
 
-    // -------------------------------
-    // Player Props (if available)
-    // -------------------------------
-    propsData.forEach((p) => {
-      newMarkets.push({
-        id: `Prop-${p.category}-${p.propName}-${p.line}`,
-        label: `${p.propName} ${p.line}`,
-        odds: p.over ?? p.under ?? "-110",
-        type: "prop",
-        valueScore: 50,
-      });
+    return markets;
+  };
+
+  const marketOptions = buildMarkets();
+
+  // -------------------------------------------------------
+  // ADD A LEG
+  // -------------------------------------------------------
+  const addLeg = (m: MarketOption) => {
+    const alreadyIn = legs.some((l) => l.id === m.id);
+    if (alreadyIn) return;
+
+    setLegs((prev) => [...prev, m]);
+  };
+
+  // -------------------------------------------------------
+  // REMOVE A LEG
+  // -------------------------------------------------------
+  const removeLeg = (id: string) => {
+    setLegs((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  // -------------------------------------------------------
+  // CALCULATE TOTAL ODDS (American Format)
+  // -------------------------------------------------------
+  const calculateTotalOdds = () => {
+    if (legs.length === 0) return 0;
+
+    const decimalLegs = legs.map((leg) => {
+      const o = leg.odds;
+
+      if (o > 0) return 1 + o / 100;
+      return 1 + 100 / Math.abs(o);
     });
 
-    setMarkets(newMarkets);
-  }, [game, propsData]);
+    const decimalTotal = decimalLegs.reduce((acc, val) => acc * val, 1);
 
-  // -----------------------------------------
-  // If BEST SGP button is pressed → load AI picks
-  // -----------------------------------------
-  useEffect(() => {
-    if (aiSGP.length === 0) return;
-
-    const legs = aiSGP.map((l) => ({
-      id: l.label,
-      label: l.label,
-      odds: l.odds,
-      type: l.category,
-    }));
-
-    setSelectedLegs(legs);
-  }, [aiSGP]);
-
-  // -----------------------------------------
-  // Toggle leg in/out of parlay
-  // -----------------------------------------
-  const toggleLeg = (leg) => {
-    if (selectedLegs.find((l) => l.id === leg.id)) {
-      setSelectedLegs(selectedLegs.filter((l) => l.id !== leg.id));
+    if (decimalTotal >= 2) {
+      return Math.round((decimalTotal - 1) * 100);
     } else {
-      setSelectedLegs([...selectedLegs, leg]);
+      return Math.round(-100 / (decimalTotal - 1));
     }
   };
 
-  // -----------------------------------------
-  // Calculate parlay odds
-  // -----------------------------------------
-  const computeParlayOdds = () => {
-    if (selectedLegs.length === 0) return 0;
+  const totalOdds = calculateTotalOdds();
 
-    let decimal = 1;
-
-    selectedLegs.forEach((leg) => {
-      const odds = leg.odds;
-      let dec =
-        odds < 0 ? 1 + 100 / Math.abs(odds) : 1 + odds / 100;
-
-      decimal *= dec;
-    });
-
-    const american =
-      decimal >= 2
-        ? Math.round((decimal - 1) * 100)
-        : Math.round(-100 / (decimal - 1));
-
-    return american;
-  };
-
-  const parlayOdds = computeParlayOdds();
-
+  // -------------------------------------------------------
+  // UI
+  // -------------------------------------------------------
   return (
     <div
       style={{
         padding: "1rem",
         background: "#111",
-        color: "#0ff",
-        borderRadius: "10px",
+        borderRadius: "8px",
+        border: "1px solid #333",
+        color: "white",
       }}
     >
-      <h2 style={{ marginBottom: "1rem" }}>Parlay Builder</h2>
+      <h2 style={{ color: "#0ff", marginBottom: "1rem" }}>
+        Parlay Builder – {game.homeTeam} vs {game.awayTeam}
+      </h2>
 
-      {/* 🔥 Best SGP Button */}
-      <BestSGPButton game={game} onGenerate={setAiSGP} />
+      {/* MARKET SELECTOR */}
+      <div
+        style={{
+          background: "#1a1a1a",
+          padding: "1rem",
+          borderRadius: "6px",
+          marginBottom: "1rem",
+        }}
+      >
+        <h3 style={{ color: "#fff", marginBottom: "0.5rem" }}>
+          Add a Market to Your Parlay
+        </h3>
 
-      {/* Market List */}
-      <div style={{ maxHeight: "350px", overflowY: "auto" }}>
-        {markets.map((m) => (
+        <select
+          onChange={(e) => {
+            const id = e.target.value;
+            const selected = marketOptions.find((m) => m.id === id);
+            if (selected) addLeg(selected);
+          }}
+          style={{
+            width: "100%",
+            padding: "0.7rem",
+            borderRadius: "4px",
+            background: "#000",
+            color: "white",
+            border: "1px solid #333",
+          }}
+        >
+          <option value="">Choose a market…</option>
+          {marketOptions.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label} ({m.odds})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* CURRENT LEGS */}
+      <div>
+        <h3>Your Legs ({legs.length})</h3>
+        {legs.length === 0 && <div>No legs added yet.</div>}
+
+        {legs.map((l) => (
           <div
-            key={m.id}
-            onClick={() => toggleLeg(m)}
+            key={l.id}
             style={{
-              padding: "10px",
-              marginBottom: "8px",
-              border: "1px solid #0ff",
+              background: "#222",
+              padding: "0.8rem",
               borderRadius: "6px",
-              cursor: "pointer",
-              background: selectedLegs.find((l) => l.id === m.id)
-                ? "#0ff"
-                : "transparent",
-              color: selectedLegs.find((l) => l.id === m.id)
-                ? "#000"
-                : "#0ff",
+              marginBottom: "0.5rem",
             }}
           >
-            <strong>{m.label}</strong>
-            <br />
-            <span style={{ opacity: 0.8 }}>Odds: {m.odds}</span>
-            <br />
-            <span style={{ opacity: 0.8 }}>Value: {m.valueScore}/100</span>
+            <strong>{l.label}</strong> — {l.odds}
+            <button
+              style={{
+                float: "right",
+                background: "red",
+                color: "white",
+                border: "none",
+                padding: "0.3rem 0.6rem",
+                cursor: "pointer",
+                borderRadius: "4px",
+              }}
+              onClick={() => removeLeg(l.id)}
+            >
+              Remove
+            </button>
           </div>
         ))}
       </div>
 
-      {/* Parlay Odds */}
-      <div style={{ marginTop: "1rem", fontSize: "1.1rem" }}>
-        <strong>Parlay Odds:</strong> {parlayOdds}
+      {/* TOTAL ODDS */}
+      <div
+        style={{
+          marginTop: "1rem",
+          fontWeight: "bold",
+          fontSize: "1.2rem",
+          color: "#0f0",
+        }}
+      >
+        Total Odds: {totalOdds > 0 ? `+${totalOdds}` : totalOdds}
       </div>
     </div>
   );
