@@ -14,12 +14,12 @@ html, body {
   padding: 0;
 }
 
-/* Default layout container max width */
+/* Default layout container */
 .main-container {
   @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }
 
-/* Page headings */
+/* Headings */
 h1, h2, h3, h4 {
   @apply font-bold text-slate-100;
 }
@@ -37,7 +37,7 @@ h2 {
   @apply bg-slate-900/60 border border-slate-800 rounded-xl p-4 shadow-lg;
 }
 
-/* Text helpers */
+/* Muted text */
 .text-muted {
   @apply text-slate-400;
 }
