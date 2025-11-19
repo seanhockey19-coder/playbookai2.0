@@ -1,16 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,jsx,ts,tsx,mdx}",
+    "./components/**/*.{js,jsx,ts,tsx,mdx}",
+    "./lib/**/*.{js,jsx,ts,tsx,mdx}", 
+    "./**/*.{js,jsx,ts,tsx,mdx}", // <-- CATCH ALL (fixes everything)
   ],
   theme: {
-    extend: {
-      spacing: {
-        "98": "26rem", // force rebuild
-      },
-    },
+    extend: {},
   },
   plugins: [],
 };
