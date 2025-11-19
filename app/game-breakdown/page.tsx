@@ -1,156 +1,265 @@
-{/* Game breakdown */}
-<section style={cardBase}>
-  <div style={subtleLabel}>Game Breakdown</div>
+"use client";
 
-  {!selectedGame ? (
-    <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
-      Select a game above to see the breakdown.
-    </div>
-  ) : (
-    <>
-      {/* Header Teams */}
+import { useEffect, useState } from "react";
+
+export default function GameBreakdownPage() {
+  const [game, setGame] = useState<any>(null);
+
+  // Load a selected game from localStorage (set by dashboard)
+  useEffect(() => {
+    const stored = localStorage.getItem("selectedGame");
+    if (stored) setGame(JSON.parse(stored));
+  }, []);
+
+  if (!game) {
+    return (
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.25rem",
+          padding: "2rem",
+          color: "white",
+          fontFamily:
+            '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif',
         }}
       >
-        <div>
-          <div style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.95)" }}>
-            Away
-          </div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 600 }}>
-            {selectedGame.awayTeam}
-          </div>
-        </div>
-
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.8)" }}>
-            Projected Total
-          </div>
-          <div style={{ fontSize: "1rem", fontWeight: 600 }}>
-            {selectedGame.projectedTotal ?? "—"}
-          </div>
-        </div>
-
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.95)" }}>
-            Home
-          </div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 600 }}>
-            {selectedGame.homeTeam}
-          </div>
-        </div>
+        No game selected.
       </div>
+    );
+  }
 
-      {/* Win Probability */}
-      <div style={{ marginBottom: "1.25rem" }}>
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        padding: "2rem",
+        background: "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
+        color: "white",
+        fontFamily:
+          '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif',
+      }}
+    >
+      <h1
+        style={{
+          fontSize: "1.75rem",
+          marginBottom: "1.5rem",
+          fontWeight: 600,
+        }}
+      >
+        {game.awayTeam} @ {game.homeTeam}
+      </h1>
+
+      {/* GAME BREAKDOWN CARD */}
+      <section
+        style={{
+          borderRadius: "1.25rem",
+          background:
+            "radial-gradient(circle at top left, rgba(37,99,235,0.12), rgba(15,23,42,0.98))",
+          border: "1px solid rgba(148,163,184,0.35)",
+          padding: "1.5rem",
+          boxShadow:
+            "0 26px 56px rgba(15,23,42,0.95), 0 0 0 1px rgba(15,23,42,0.9) inset",
+        }}
+      >
         <div
           style={{
-            fontSize: "0.75rem",
-            color: "rgba(148,163,184,0.95)",
-            marginBottom: "0.35rem",
+            fontSize: "0.85rem",
+            color: "rgba(148,163,184,0.9)",
+            marginBottom: "1rem",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
           }}
         >
-          Win Probability
+          Game Breakdown
         </div>
 
-        <div
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            height: "16px",
-            borderRadius: "999px",
-            overflow: "hidden",
-            display: "flex",
-          }}
-        >
-          <div
-            style={{
-              width: "62%",
-              background: "linear-gradient(90deg,#3b82f6,#22c55e)",
-              transition: "width 0.3s ease",
-            }}
-          />
-          <div style={{ flex: 1 }} />
-        </div>
-
+        {/* HEADER TEAMS */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginTop: "0.35rem",
-            fontSize: "0.8rem",
-            color: "rgba(148,163,184,0.9)",
+            marginBottom: "1.75rem",
           }}
         >
-          <span>{selectedGame.awayTeam} · 62%</span>
-          <span>{selectedGame.homeTeam} · 38%</span>
-        </div>
-      </div>
+          <div>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "rgba(148,163,184,0.8)",
+              }}
+            >
+              Away
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
+              {game.awayTeam}
+            </div>
+          </div>
 
-      {/* Offense & Defense Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2,minmax(0,1fr))",
-          gap: "1rem",
-        }}
-      >
-        {/* Offensive Stats */}
-        <div>
-          <div style={subtleLabel}>Offensive Outlook</div>
-          <ul style={{ fontSize: "0.85rem", lineHeight: "1.45" }}>
-            <li>Passing Efficiency: +12% edge</li>
-            <li>Explosive Pass Rate: Moderate</li>
-            <li>Red Zone Conversion: 61%</li>
-            <li>Pace: Fast (26.5 sec/play)</li>
-          </ul>
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "rgba(148,163,184,0.8)",
+              }}
+            >
+              Projected Total
+            </div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+              {game.projectedTotal ?? "—"}
+            </div>
+          </div>
+
+          <div style={{ textAlign: "right" }}>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "rgba(148,163,184,0.8)",
+              }}
+            >
+              Home
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
+              {game.homeTeam}
+            </div>
+          </div>
         </div>
 
-        {/* Defensive Stats */}
-        <div>
-          <div style={subtleLabel}>Defensive Matchups</div>
-          <ul style={{ fontSize: "0.85rem", lineHeight: "1.45" }}>
-            <li>Pass Rush Grade: Top-10</li>
-            <li>Coverage Breakdown: Strong perimeter</li>
-            <li>Run Defense: Vulnerable inside</li>
-            <li>Pressure Rate: 29%</li>
-          </ul>
-        </div>
-      </div>
+        {/* WIN PROBABILITY */}
+        <div style={{ marginBottom: "1.75rem" }}>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "rgba(148,163,184,0.95)",
+              marginBottom: "0.35rem",
+            }}
+          >
+            Win Probability
+          </div>
 
-      {/* Weather */}
-      <div style={{ marginTop: "1.25rem" }}>
-        <div style={subtleLabel}>Weather / Conditions</div>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              height: "18px",
+              borderRadius: "999px",
+              overflow: "hidden",
+              display: "flex",
+            }}
+          >
+            <div
+              style={{
+                width: "62%",
+                background: "linear-gradient(90deg,#3b82f6,#22c55e)",
+                transition: "width 0.3s ease",
+              }}
+            />
+            <div style={{ flex: 1 }} />
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "0.4rem",
+              fontSize: "0.8rem",
+              color: "rgba(148,163,184,0.9)",
+            }}
+          >
+            <span>{game.awayTeam} · 62%</span>
+            <span>{game.homeTeam} · 38%</span>
+          </div>
+        </div>
+
+        {/* OFFENSE + DEFENSE */}
         <div
           style={{
-            fontSize: "0.85rem",
-            lineHeight: 1.45,
-            color: "rgba(148,163,184,0.95)",
+            display: "grid",
+            gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+            gap: "1.5rem",
           }}
         >
-          Dome · Controlled environment · No weather impact.
-        </div>
-      </div>
+          {/* Offense */}
+          <div>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "rgba(148,163,184,0.95)",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Offensive Outlook
+            </div>
+            <ul style={{ fontSize: "0.9rem", lineHeight: 1.5 }}>
+              <li>Passing Efficiency: +12% edge</li>
+              <li>Explosive Pass Rate: Moderate</li>
+              <li>Red Zone Conversion: 61%</li>
+              <li>Pace: Fast (26.5 sec/play)</li>
+            </ul>
+          </div>
 
-      {/* Narrative */}
-      <div style={{ marginTop: "1.25rem" }}>
-        <div style={subtleLabel}>Analysis Summary</div>
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "rgba(148,163,184,0.95)",
-            lineHeight: 1.45,
-          }}
-        >
-          Our model expects a pass-heavy script with Dallas having a measurable
-          edge in explosive pass rate and overall offensive efficiency. The
-          Raiders may struggle against pressure, giving the Cowboys a strong
-          positional advantage on early downs.
-        </p>
-      </div>
-    </>
-  )}
-</section>
+          {/* Defense */}
+          <div>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "rgba(148,163,184,0.95)",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Defensive Matchups
+            </div>
+            <ul style={{ fontSize: "0.9rem", lineHeight: 1.5 }}>
+              <li>Pass Rush Grade: Top-10</li>
+              <li>Coverage Breakdown: Strong perimeter</li>
+              <li>Run Defense: Vulnerable inside</li>
+              <li>Pressure Rate: 29%</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* WEATHER */}
+        <div style={{ marginTop: "1.75rem" }}>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "rgba(148,163,184,0.95)",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Weather / Conditions
+          </div>
+          <div
+            style={{
+              fontSize: "0.9rem",
+              color: "rgba(148,163,184,0.95)",
+            }}
+          >
+            Dome · Controlled environment · No weather impact.
+          </div>
+        </div>
+
+        {/* SUMMARY */}
+        <div style={{ marginTop: "1.75rem" }}>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "rgba(148,163,184,0.95)",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Analysis Summary
+          </div>
+          <p
+            style={{
+              fontSize: "1rem",
+              color: "rgba(148,163,184,0.95)",
+              lineHeight: 1.55,
+            }}
+          >
+            Our model expects a pass-heavy script with measurable edges in
+            passing efficiency and defensive pressure. The matchup trends
+            strongly toward a fast-paced, high-scoring environment where early
+            down success will decide momentum.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+}
