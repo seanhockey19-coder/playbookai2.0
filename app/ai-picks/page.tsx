@@ -1,64 +1,84 @@
-// app/ai-picks/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+
 export default function AIPicksPage() {
+  const [sport, setSport] = useState("nfl");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("activeSport");
+    if (saved) setSport(saved);
+  }, []);
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl md:text-3xl font-semibold text-slate-50">
-          AI Picks
-        </h1>
-        <p className="text-sm text-slate-400">
-          Full card of AI-generated edges across props, totals, and spreads.
-        </p>
-      </header>
+    <div
+      style={{
+        minHeight: "100vh",
+        padding: "2rem",
+        background:
+          "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
+        color: "white",
+        fontFamily:
+          '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif',
+      }}
+    >
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => (window.location.href = "/dashboard")}
+        style={{
+          padding: "0.5rem 1rem",
+          borderRadius: "999px",
+          background: "linear-gradient(135deg,#3b82f6,#22c55e)",
+          color: "#0f172a",
+          fontWeight: 600,
+          border: "none",
+          cursor: "pointer",
+          marginBottom: "1.5rem",
+        }}
+      >
+        ← Back to Dashboard
+      </button>
 
-      <section className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 md:p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-200">
-            Top Edges (sample data)
-          </h2>
-          <span className="text-[11px] text-slate-500">
-            Will be fed by /api/ai-picks
-          </span>
-        </div>
+      <h1 style={{ fontSize: "1.7rem", fontWeight: 600 }}>
+        AI Picks — {sport.toUpperCase()}
+      </h1>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs md:text-sm">
-            <thead>
-              <tr className="text-slate-400 border-b border-slate-800">
-                <th className="py-2 text-left font-normal">Player</th>
-                <th className="py-2 text-left font-normal">Market</th>
-                <th className="py-2 text-left font-normal">Line</th>
-                <th className="py-2 text-left font-normal">Book Odds</th>
-                <th className="py-2 text-left font-normal">Model Edge</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              <tr>
-                <td className="py-2 text-slate-100">CeeDee Lamb</td>
-                <td className="py-2">Receptions</td>
-                <td className="py-2">o6.5</td>
-                <td className="py-2">-135</td>
-                <td className="py-2 text-cyan-300">+7.2%</td>
-              </tr>
-              <tr>
-                <td className="py-2 text-slate-100">Davante Adams</td>
-                <td className="py-2">Receiving yards</td>
-                <td className="py-2">o74.5</td>
-                <td className="py-2">-120</td>
-                <td className="py-2 text-cyan-300">+5.4%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <p style={{ marginTop: "0.5rem", color: "rgba(148,163,184,0.9)" }}>
+        Top edge-rated props based on your current sport selection.
+      </p>
 
-        <p className="mt-4 text-[11px] text-slate-500">
-          Once the backend is wired, this table will call{" "}
-          <code className="bg-slate-800 px-1 py-[1px] rounded text-[10px]">
-            /api/ai-picks
-          </code>{" "}
-          and show live props from the odds feed.
-        </p>
-      </section>
+      <div
+        style={{
+          marginTop: "2rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <AIPick label="CeeDee Lamb — o5.5 Receptions" edge="+7%" />
+        <AIPick label="Davante Adams — o67.5 Yards" edge="+5%" />
+        <AIPick label="Tony Pollard — o49.5 Rush Yards" edge="+4%" />
+      </div>
+    </div>
+  );
+}
+
+function AIPick({ label, edge }: { label: string; edge: string }) {
+  return (
+    <div
+      style={{
+        padding: "1rem 1.25rem",
+        borderRadius: "1rem",
+        background:
+          "radial-gradient(circle at top left, rgba(37,99,235,0.15), rgba(15,23,42,0.95))",
+        border: "1px solid rgba(148,163,184,0.35)",
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: "1rem",
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ color: "#22c55e", fontWeight: 600 }}>{edge}</span>
     </div>
   );
 }
