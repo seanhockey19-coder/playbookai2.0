@@ -229,7 +229,18 @@ export default function DashboardPage() {
             <div style={navItemActive}>Dashboard</div>
             <div style={navItem}>AI Picks</div>
             <div style={navItem}>Ladder Challenge</div>
-            <div style={navItem}>Game Breakdown</div>
+           <div
+  style={navItem}
+  onClick={() => {
+    if (selectedGame) {
+      localStorage.setItem("selectedGame", JSON.stringify(selectedGame));
+    }
+    window.location.href = "/game-breakdown";
+  }}
+>
+  Game Breakdown
+</div>
+
             <div style={navItem}>Player Props</div>
           </nav>
         </div>
@@ -506,3 +517,4 @@ function LineValueCard({ label, top, bottom }: LineValueCardProps) {
     </div>
   );
 }
+
