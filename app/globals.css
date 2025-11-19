@@ -2,26 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Simple base styling for the app */
-:root {
-  --background: #020617; /* slate-950 */
-  --foreground: #f9fafb; /* slate-50 */
+/* Global site styles */
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
 }
 
-html,
-body {
-  padding: 0;
+html, body {
+  height: 100%;
+  width: 100%;
   margin: 0;
-  min-height: 100%;
+  padding: 0;
 }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", sans-serif;
+/* Default layout container max width */
+.main-container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }
 
-* {
-  box-sizing: border-box;
+/* Page headings */
+h1, h2, h3, h4 {
+  @apply font-bold text-slate-100;
+}
+
+h1 {
+  @apply text-3xl sm:text-4xl mb-4;
+}
+
+h2 {
+  @apply text-2xl sm:text-3xl mt-6 mb-3;
+}
+
+/* Card styles */
+.card {
+  @apply bg-slate-900/60 border border-slate-800 rounded-xl p-4 shadow-lg;
+}
+
+/* Text helpers */
+.text-muted {
+  @apply text-slate-400;
 }
