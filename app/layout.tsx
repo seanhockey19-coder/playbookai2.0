@@ -1,10 +1,10 @@
-// app/layout.tsx
-import type { Metadata } from "next";
 import "./globals.css";
+import { Sidebar } from "@/components/Sidebar";
+import { FavoritesProvider } from "@/context/FavoritesContext";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "CoachesPlaybookAI",
-  description: "Alpha build – internal use only",
+  description: "Sports analytics dashboard",
 };
 
 export default function RootLayout({
@@ -13,15 +13,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-   import { FavoritesProvider } from "@/context/FavoritesContext";
-
-<html lang="en">
-  <body className="...">
-    <FavoritesProvider>
-      {children}
-    </FavoritesProvider>
-  </body>
-</html>
- 
+    <html lang="en">
+      <body className="bg-slate-950 text-slate-50">
+        <FavoritesProvider>
+          <Sidebar />
+          <main className="md:pl-64 p-4">{children}</main>
+        </FavoritesProvider>
+      </body>
+    </html>
+  );
 }
-
