@@ -1,37 +1,38 @@
-import Image from "next/image";
-import { NFL_LOGOS, NBA_LOGOS } from "@/lib/teamLogos";
+// components/TeamLogo.tsx
+import React from "react";
 
-export default function TeamLogo({
-  team,
-  sport,
-  size = 20,
-}: {
+type Sport = "nfl" | "nba";
+
+interface TeamLogoProps {
   team: string;
-  sport: "nfl" | "nba";
+  sport: Sport;
   size?: number;
-}) {
-  const src = sport === "nfl" ? NFL_LOGOS[team] : NBA_LOGOS[team];
+}
 
-  if (!src) {
-    return (
-      <div
-        style={{
-          width: size,
-          height: size,
-          background: "rgba(255,255,255,0.08)",
-          borderRadius: "50%",
-        }}
-      />
-    );
+/**
+ * Simple pill / circle logo with team initials.
+ * No extra visible text so it doesn't mess up layout labels.
+ */
+export default function TeamLogo({ team, sport, size = 24 }: TeamLogoProps) {
+  // Derive initials from team name, e.g. "Buffalo Bills" -> "BB", "New York Jets" -> "NY"
+  const words = team.split(" ").filter(Boolean);
+  let initials = "";
+
+  if (words.length >= 2) {
+    initials = (words[0][0] + words[1][0]).toUpperCase();
+  } else if (words.length === 1) {
+    initials = words[0].slice(0, 2).toUpperCase();
+  } else {
+    initials = "?";
   }
 
   return (
-    <Image
-      src={src}
-      alt={`${team} logo`}
-      width={size}
-      height={size}
-      className="rounded-full"
-    />
+    <div
+      aria-label={team}
+      className="flex items-center justify-center rounded-full bg-slate-800 text-[10px] font-semibold text-slate-100 shrink-0"
+      style={{ width: size, height: size }}
+    >
+      {initials}
+    </div>
   );
 }
