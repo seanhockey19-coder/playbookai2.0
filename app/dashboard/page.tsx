@@ -67,7 +67,8 @@ const MOCK_GAMES: Record<Sport, Game[]> = {
 const pageShell: React.CSSProperties = {
   minHeight: "100vh",
   display: "flex",
-  background: "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
+  background:
+    "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
   color: "white",
 };
 
@@ -162,7 +163,9 @@ export default function DashboardPage() {
       <aside style={sideNav}>
         <div>
           <div style={{ marginBottom: "2rem" }}>
-            <div style={{ fontSize: "0.8rem", color: "rgba(148,163,184,0.9)" }}>
+            <div
+              style={{ fontSize: "0.8rem", color: "rgba(148,163,184,0.9)" }}
+            >
               Coaches
             </div>
             <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
@@ -170,7 +173,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <nav style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <nav
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.35rem",
+            }}
+          >
             <div
               style={isActive("/dashboard")}
               onClick={() => (window.location.href = "/dashboard")}
@@ -234,7 +243,9 @@ export default function DashboardPage() {
         {/* HEADER ----------------------- */}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <div>
-            <div style={subtleLabel}>Live matchup insights + AI projections</div>
+            <div style={subtleLabel}>
+              Live matchup insights + AI projections
+            </div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>
               {sport.toUpperCase()} Dashboard
             </h1>
@@ -277,7 +288,7 @@ export default function DashboardPage() {
             gap: "1.25rem",
           }}
         >
-          {/* GAME BREAKDOWN PANEL (simple placeholder for now) */}
+          {/* GAME BREAKDOWN PANEL */}
           <section style={cardBase}>
             <div style={subtleLabel}>Game Breakdown</div>
             <p style={{ opacity: 0.7 }}>
@@ -296,8 +307,7 @@ export default function DashboardPage() {
                   display: "flex",
                   justifyContent: "space-between",
                   marginBottom: "0.5rem",
-                  fontSize: "0.
-85rem",
+                  fontSize: "0.85rem", // FIXED
                 }}
               >
                 <span>{p.label}</span>
@@ -312,4 +322,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
