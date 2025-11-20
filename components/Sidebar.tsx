@@ -10,11 +10,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/" },
-  { label: "AI Picks", href: "/ai-picks" },
-  { label: "Ladder Challenge", href: "/ladder-challenge" },
-  { label: "Game Breakdown", href: "/game-breakdown" },
-  { label: "Player Props", href: "/player-props" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "AI Picks", href: "/dashboard/ai-picks" },
+  { label: "Ladder Challenge", href: "/dashboard/ladder-challenge" },
+  { label: "Game Breakdown", href: "/dashboard/game-breakdown" },
+  { label: "Player Props", href: "/dashboard/player-props" },
+  { label: "🔥 Trending Props", href: "/dashboard/trending-props" }, // NEW
 ];
 
 function NavLink({ item }: { item: NavItem }) {
@@ -22,8 +23,8 @@ function NavLink({ item }: { item: NavItem }) {
   const safePath = pathname ?? "/";
 
   const isActive =
-    item.href === "/"
-      ? safePath === "/"
+    item.href === "/dashboard"
+      ? safePath === "/dashboard"
       : safePath.startsWith(item.href);
 
   return (
