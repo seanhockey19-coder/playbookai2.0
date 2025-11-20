@@ -16,8 +16,9 @@ interface Game {
 
 interface SnapshotPick {
   id: string;
+  team: string; // bookmaker label
+  favoriteTeamFull: string; // REAL full team name
   game: string;
-  team: string;
   market: string;
   odds: number;
 }
@@ -53,7 +54,7 @@ export default function DashboardPage() {
   const [nbaGames, setNbaGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load ALL games
+  // Load all games once
   useEffect(() => {
     async function loadAll() {
       setLoading(true);
@@ -67,47 +68,46 @@ export default function DashboardPage() {
 
   const games = sport === "nfl" ? nflGames : nbaGames;
 
-  // AI Snapshot (simple odds-based version for now)
- const aiSnapshot = useMemo(() => {
-  return games.slice(0, 3).flatMap((g) => {
-    const h2h = g.markets?.find((m: any) => m.key === "h2h");
-    if (!h2h || !h2h.outcomes?.length) return [];
+  // AI Snapshot: clean team name fix
+  const aiSnapshot: SnapshotPick[] = useMemo(() => {
+    return games.slice(0, 3).flatMap((g) => {
+      const h2h = g.markets?.find((m: any) => m.key === "h2h");
+      if (!h2h || !h2h.outcomes?.length) return [];
 
-    const favorite = h2h.outcomes.reduce((best: any, o: any) =>
-      !best ? o : Math.abs(o.price) < Math.abs(best.price) ? o : best
-    );
+      const favorite = h2h.outcomes.reduce((best: any, o: any) =>
+        !best ? o : Math.abs(o.price) < Math.abs(best.price) ? o : best
+      );
 
-    // Convert bookmaker name to actual team name
-    const favoriteTeamFull =
-      favorite.name.toLowerCase().includes(g.homeTeam.toLowerCase())
-        ? g.homeTeam
-        : favorite.name.toLowerCase().includes(g.awayTeam.toLowerCase())
-        ? g.awayTeam
-        : favorite.name; // fallback
+      const nameLower = favorite.name.toLowerCase();
 
-    return {
-      id: `${g.id}-${favorite.name}`,
-      team: favorite.name, // bookmaker label
-      favoriteTeamFull, // correct team name
-      game: `${g.awayTeam} @ ${g.homeTeam}`,
-      market: "Moneyline",
-      odds: favorite.price,
-    };
-  });
-}, [games]);
+      const fullTeam =
+        nameLower.includes(g.homeTeam.toLowerCase()) ? g.homeTeam :
+        nameLower.includes(g.awayTeam.toLowerCase()) ? g.awayTeam :
+        favorite.name; // fallback
+
+      return {
+        id: `${g.id}-${favorite.name}`,
+        team: favorite.name,
+        favoriteTeamFull: fullTeam,
+        game: `${g.awayTeam} @ ${g.homeTeam}`,
+        market: "Moneyline",
+        odds: favorite.price,
+      };
+    });
+  }, [games]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-slate-400">
-            Live NFL & NBA slate with an odds-driven snapshot.
+            Live NFL & NBA slate with quick AI insights.
           </p>
         </div>
 
-        {/* Sport switcher */}
+        {/* SPORT SWITCH */}
         <div className="inline-flex items-center rounded-full bg-slate-900 p-1 text-xs font-medium">
           <button
             onClick={() => setSport("nfl")}
@@ -128,9 +128,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* TOP ROW: AI snapshot + quick links */}
+      {/* TOP: AI SNAPSHOT + QUICK LINKS */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
-        {/* AI Snapshot */}
+        {/* AI Snapshot Panel */}
         <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 AI Picks Snapshot
               </div>
               <div className="text-sm text-slate-300">
-                Based on current moneyline favorites.
+                Favorite-side value picks based on current lines.
               </div>
             </div>
 
@@ -150,7 +150,7 @@ export default function DashboardPage() {
           {loading ? (
             <p className="text-slate-400 text-sm">Loading…</p>
           ) : aiSnapshot.length === 0 ? (
-            <p className="text-slate-400 text-sm">No games available yet.</p>
+            <p className="text-slate-400 text-sm">No games found.</p>
           ) : (
             <div className="space-y-2">
               {aiSnapshot.map((p) => (
@@ -160,8 +160,8 @@ export default function DashboardPage() {
                 >
                   <div>
                     <div className="font-semibold flex items-center gap-1.5">
-                      <TeamLogo team={p.team} sport={sport} size={18} />
-                      {p.team}
+                      <TeamLogo team={p.favoriteTeamFull} sport={sport} size={18} />
+                      {p.favoriteTeamFull}
                     </div>
                     <div className="text-xs text-slate-400">{p.game}</div>
                   </div>
@@ -176,16 +176,14 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Quick Nav */}
+        {/* QUICK LINKS */}
         <div className="space-y-3">
           <Link
             href="/dashboard/player-props"
             className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
           >
             <div className="font-semibold">Player Props</div>
-            <div className="text-xs text-slate-400">
-              Browse live props by game.
-            </div>
+            <div className="text-xs text-slate-400">Browse live props by game.</div>
           </Link>
 
           <Link
@@ -194,7 +192,7 @@ export default function DashboardPage() {
           >
             <div className="font-semibold">Ladder Challenge</div>
             <div className="text-xs text-slate-400">
-              Auto-build ladders from live props (-500 to -1000).
+              Auto-build ladders from -500 to -1000 props.
             </div>
           </Link>
 
@@ -204,7 +202,7 @@ export default function DashboardPage() {
           >
             <div className="font-semibold">Game Breakdown</div>
             <div className="text-xs text-slate-400">
-              Deep dive into spreads, totals, & props.
+              Deep dive into spreads, totals & props.
             </div>
           </Link>
         </div>
@@ -266,4 +264,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
