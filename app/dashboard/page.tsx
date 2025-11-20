@@ -1,8 +1,8 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import TeamLogo from "@/components/TeamLogo";
 
 type Sport = "nfl" | "nba";
 
@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const [nbaGames, setNbaGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load games when dashboard mounts
+  // Load ALL games
   useEffect(() => {
     async function loadAll() {
       setLoading(true);
@@ -67,21 +67,18 @@ export default function DashboardPage() {
 
   const games = sport === "nfl" ? nflGames : nbaGames;
 
-  // Simple “AI snapshot” – takes favorite moneyline side from first few games
+  // AI Snapshot (simple odds-based version for now)
   const aiSnapshot: SnapshotPick[] = useMemo(() => {
     return games.slice(0, 3).flatMap((g) => {
       const h2h = g.markets?.find((m: any) => m.key === "h2h");
-      if (!h2h) return [];
-      const outcomes = h2h.outcomes || [];
-      if (!outcomes.length) return [];
-      // Pick the shorter-odds favorite as the “safer” AI lean
-      const favorite = outcomes.reduce((best: any, o: any) =>
+      if (!h2h || !h2h.outcomes?.length) return [];
+      const favorite = h2h.outcomes.reduce((best: any, o: any) =>
         !best ? o : Math.abs(o.price) < Math.abs(best.price) ? o : best
       );
       return {
         id: `${g.id}-${favorite.name}`,
-        game: `${g.homeTeam} vs ${g.awayTeam}`,
         team: favorite.name,
+        game: `${g.homeTeam} vs ${g.awayTeam}`,
         market: "Moneyline",
         odds: favorite.price,
       };
@@ -91,14 +88,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-slate-400">
-            Live NFL & NBA slate with a quick AI-style snapshot built from live odds.
+            Live NFL & NBA slate with an odds-driven snapshot.
           </p>
         </div>
 
+        {/* Sport switcher */}
         <div className="inline-flex items-center rounded-full bg-slate-900 p-1 text-xs font-medium">
           <button
             onClick={() => setSport("nfl")}
@@ -119,124 +117,105 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Top row: AI snapshot + quick links */}
+      {/* TOP ROW: AI snapshot + quick links */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
-        {/* AI snapshot card */}
+        {/* AI Snapshot */}
         <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-xs uppercase tracking-wide text-slate-400">
-                AI Picks Snapshot (Odds-Driven)
+              <div className="text-xs uppercase text-slate-400">
+                AI Picks Snapshot
               </div>
               <div className="text-sm text-slate-300">
-                Early leans based on current moneyline favorites.
+                Based on current moneyline favorites.
               </div>
             </div>
-            <Link
-              href="/dashboard/ai-picks"
-              className="text-xs text-sky-400 hover:text-sky-300"
-            >
-              View full AI picks →
+
+            <Link href="/dashboard/ai-picks" className="text-xs text-sky-400">
+              View full →
             </Link>
           </div>
 
-          {loading && (
-            <div className="text-sm text-slate-400">Loading live odds…</div>
-          )}
+          {loading ? (
+            <p className="text-slate-400 text-sm">Loading…</p>
+          ) : aiSnapshot.length === 0 ? (
+            <p className="text-slate-400 text-sm">No games available yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {aiSnapshot.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-md bg-slate-900/80 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <TeamLogo team={p.team} sport={sport} size={18} />
+                      {p.team}
+                    </div>
+                    <div className="text-xs text-slate-400">{p.game}</div>
+                  </div>
 
-          {!loading && aiSnapshot.length === 0 && (
-            <div className="text-sm text-slate-400">
-              No games available yet for this sport.
+                  <div className="text-right text-xs">
+                    <div className="font-mono">{p.odds}</div>
+                    <div className="text-[10px] text-slate-500">Favorite</div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-
-          <div className="space-y-2">
-            {aiSnapshot.map((pick) => (
-              <div
-                key={pick.id}
-                className="flex items-center justify-between rounded-lg bg-slate-900/80 px-3 py-2 text-sm"
-              >
-                <div>
-                  <div className="font-semibold">{pick.team}</div>
-                  <div className="text-xs text-slate-400">{pick.game}</div>
-                </div>
-                <div className="text-right text-xs">
-                  <div className="font-mono text-slate-100">
-                    {pick.odds > 0 ? "+" : ""}
-                    {pick.odds}
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    Favorite via live moneyline
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-3 text-[11px] text-slate-500">
-            This is a simple odds-based preview. Once your full model is ready,
-            this card will use true model edges (like the +7% edge we talked about).
-          </p>
         </div>
 
-        {/* Quick nav */}
+        {/* Quick Nav */}
         <div className="space-y-3">
-          <div className="text-xs uppercase tracking-wide text-slate-400">
-            Quick Navigation
-          </div>
           <Link
             href="/dashboard/player-props"
             className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
           >
-            <div className="font-semibold">Player Props Scanner</div>
+            <div className="font-semibold">Player Props</div>
             <div className="text-xs text-slate-400">
-              Browse live props by game and filter by player or market.
+              Browse live props by game.
             </div>
           </Link>
+
           <Link
             href="/dashboard/ladder-challenge"
             className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
           >
             <div className="font-semibold">Ladder Challenge</div>
             <div className="text-xs text-slate-400">
-              Build low-risk ladders from live props in the -500 to -1000 range.
+              Auto-build ladders from live props (-500 to -1000).
             </div>
           </Link>
+
           <Link
             href="/dashboard/game-breakdown"
             className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
           >
             <div className="font-semibold">Game Breakdown</div>
             <div className="text-xs text-slate-400">
-              Dive into spreads, totals, and props for a single matchup.
+              Deep dive into spreads, totals, & props.
             </div>
           </Link>
         </div>
       </div>
 
-      {/* Live slate table */}
+      {/* LIVE SLATE */}
       <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-xs uppercase tracking-wide text-slate-400">
+          <div className="text-xs uppercase text-slate-400">
             Live {sport.toUpperCase()} Slate
           </div>
           <div className="text-xs text-slate-500">
-            {games.length} game{games.length === 1 ? "" : "s"} loaded from Odds API
+            {games.length} games loaded
           </div>
         </div>
 
         {loading ? (
-          <div className="text-sm text-slate-400">Loading games…</div>
-        ) : games.length === 0 ? (
-          <div className="text-sm text-slate-400">
-            No active games for this sport right now.
-          </div>
+          <p className="text-slate-400 text-sm">Loading games…</p>
         ) : (
           <div className="space-y-2">
             {games.map((g) => {
               const h2h = g.markets?.find((m: any) => m.key === "h2h");
-              const spreads = g.markets?.find((m: any) => m.key === "spreads");
-              const total = g.markets?.find((m: any) => m.key === "totals");
 
               return (
                 <div
@@ -244,61 +223,29 @@ export default function DashboardPage() {
                   className="rounded-lg bg-slate-900/80 px-3 py-2 text-sm flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div className="font-semibold">
-                      {g.awayTeam} @ {g.homeTeam}
+                    <div className="font-semibold flex items-center gap-2">
+                      <TeamLogo team={g.awayTeam} sport={sport} size={20} />
+                      {g.awayTeam}
+                      <span className="text-slate-500 text-xs">@</span>
+                      <TeamLogo team={g.homeTeam} sport={sport} size={20} />
+                      {g.homeTeam}
                     </div>
+
                     <div className="text-xs text-slate-400">
                       {formatTime(g.commence)}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 text-xs text-slate-300">
-                    {h2h && (
-                      <div>
-                        <div className="text-[10px] uppercase text-slate-500">
-                          Moneyline
+                  {/* Moneyline */}
+                  {h2h && (
+                    <div className="flex gap-3 text-xs text-slate-300 mt-1 sm:mt-0">
+                      {h2h.outcomes?.map((o: any) => (
+                        <div key={o.name} className="font-mono">
+                          {o.name}: {o.price}
                         </div>
-                        <div className="flex gap-2">
-                          {h2h.outcomes?.map((o: any) => (
-                            <div key={o.name} className="font-mono">
-                              {o.name}: {o.price > 0 ? "+" : ""}
-                              {o.price}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {spreads && (
-                      <div>
-                        <div className="text-[10px] uppercase text-slate-500">
-                          Spread
-                        </div>
-                        <div className="flex gap-2">
-                          {spreads.outcomes?.map((o: any) => (
-                            <div key={o.name} className="font-mono">
-                              {o.name}: {o.point} ({o.price > 0 ? "+" : ""}
-                              {o.price})
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {total && (
-                      <div>
-                        <div className="text-[10px] uppercase text-slate-500">
-                          Total
-                        </div>
-                        <div className="flex gap-2">
-                          {total.outcomes?.map((o: any) => (
-                            <div key={o.name} className="font-mono">
-                              {o.name}: {o.point} ({o.price > 0 ? "+" : ""}
-                              {o.price})
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
