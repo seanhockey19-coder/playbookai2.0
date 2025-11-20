@@ -187,7 +187,7 @@ export default function DashboardPage() {
 
             <div
               style={isActive("/ladder")}
-              onClick={() => (window.location.href = "/ladader")}
+              onClick={() => (window.location.href = "/ladder")}
             >
               Ladder Challenge
             </div>
@@ -312,3 +312,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
