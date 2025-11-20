@@ -1,5 +1,4 @@
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 
 export const metadata = {
@@ -16,8 +15,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-slate-950 text-slate-50">
         <FavoritesProvider>
-          <Sidebar />
-          <main className="md:pl-64 p-4">{children}</main>
+          {/* Root layout should have NO sidebar */}
+          {children}
         </FavoritesProvider>
       </body>
     </html>
