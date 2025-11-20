@@ -1,12 +1,8 @@
+// app/api/hot-props/route.ts
 import { NextResponse } from "next/server";
+import { computeEdge } from "@/lib/edgeModel";
 
 const API = process.env.ODDS_API_KEY;
-
-// Convert American odds → implied probability
-function impliedProb(odds: number): number {
-  if (odds < 0) return Math.abs(odds) / (Math.abs(odds) + 100);
-  return 100 / (odds + 100);
-}
 
 export async function GET() {
   if (!API) {
@@ -14,8 +10,8 @@ export async function GET() {
   }
 
   const sports = [
-    { key: "nfl", path: "americanfootball_nfl" },
-    { key: "nba", path: "basketball_nba" },
+    { key: "nfl" as const, path: "americanfootball_nfl" },
+    { key: "nba" as const, path: "basketball_nba" },
   ];
 
   let results: any[] = [];
@@ -31,7 +27,7 @@ export async function GET() {
 
     for (const g of games) {
       const propsRes = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${s.path}/events/${g.id}/odds/?regions=us&markets=player_pass_yds,player_rush_yds,player_rec_yds,player_points,player_assists,player_rebounds,player_threes,player_anytime_td&apiKey=${API}`,
+        `https://api.the-odds-api.com/v4/sports/${s.path}/events/${g.id}/odds/?regions=us&markets=player_pass_yds,player_rush_yds,player_rec_yds,player_receptions,player_points,player_assists,player_rebounds,player_threes,player_anytime_td&apiKey=${API}`,
         { cache: "no-store" }
       );
 
@@ -41,12 +37,14 @@ export async function GET() {
 
       for (const m of markets) {
         for (const o of m.outcomes) {
-          const prob = impliedProb(o.price);
-
-          // Fake form score until stats integration (Phase 3)
-          const formScore = Math.random() * 0.25 + 0.45; // 45%–70%
-
-          const edge = formScore - prob;
+          const edgeRes = computeEdge({
+            sport: s.key,
+            marketKey: m.key,
+            line: o.point ?? null,
+            odds: o.price,
+            player: o.description,
+            game: `${event.home_team} @ ${event.away_team}`,
+          });
 
           results.push({
             id: `${event.id}-${m.key}-${o.description}`,
@@ -56,10 +54,13 @@ export async function GET() {
             market: m.key,
             line: o.point ?? null,
             odds: o.price,
-            implied: prob,
-            expected: formScore,
-            edge,
-            score: edge * 100,
+            implied: edgeRes.impliedProb,
+            expected: edgeRes.modelProb,
+            edge: edgeRes.edge,
+            confidence: edgeRes.confidence,
+            notes: edgeRes.notes,
+            category: edgeRes.category,
+            score: edgeRes.edge * 100, // rank by edge %
           });
         }
       }
