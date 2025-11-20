@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { label: "Player Props", href: "/dashboard/player-props" },
   { label: "🔥 Trending Props", href: "/dashboard/trending-props" }, // NEW
   { label: "⭐ Favorites", href: "/dashboard/favorites" },
+  { label: "🔥 Hot Props", href: "/dashboard/hot-props" },
 ];
 
 function NavLink({ item }: { item: NavItem }) {
