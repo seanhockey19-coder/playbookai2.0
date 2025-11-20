@@ -122,7 +122,7 @@ const subtleLabel: React.CSSProperties = {
 // ----------------------------------------------------------
 
 export default function DashboardPage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const [sport, setSport] = useState<Sport>("nfl");
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
@@ -322,3 +322,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
