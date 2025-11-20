@@ -1,27 +1,35 @@
 // app/dashboard/ladder-challenge/page.tsx
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
 
 type Sport = "nfl" | "nba";
 
-interface LadderLeg {
+interface Game {
   id: string;
+  homeTeam: string;
+  awayTeam: string;
+  commence: string;
+}
+
+interface PlayerProp {
+  id: string;
+  sport: string;
   player: string;
   team: string;
   market: string;
-  line: string;
-  odds: number; // American odds
-  edge: number; // %
-  confidence: "lock" | "solid" | "sprinkle";
+  line: number | null;
+  odds: number;
+  edge: number;
+  game: string;
 }
 
 interface LadderStep {
   step: number;
   stake: number;
   target: number;
-  legs: LadderLeg[];
+  legs: PlayerProp[];
 }
 
 const BASE_LADDER_STAKES = [
@@ -36,126 +44,136 @@ const BASE_LADDER_STAKES = [
   { step: 9, stake: 2560, target: 5120 },
 ];
 
-const MOCK_LADDER_LEGS: Record<Sport, LadderLeg[]> = {
-  nfl: [
-    {
-      id: "lamb-rec-lock",
-      player: "CeeDee Lamb",
-      team: "DAL",
-      market: "Receptions",
-      line: "5.5 O",
-      odds: -550,
-      edge: 7.2,
-      confidence: "lock",
-    },
-    {
-      id: "pollard-rush-solid",
-      player: "Tony Pollard",
-      team: "DAL",
-      market: "Rushing yards",
-      line: "39.5 O",
-      odds: -500,
-      edge: 5.1,
-      confidence: "solid",
-    },
-    {
-      id: "mahomes-pass-lock",
-      player: "Patrick Mahomes",
-      team: "KC",
-      market: "Alt passing yards",
-      line: "199.5 O",
-      odds: -650,
-      edge: 6.4,
-      confidence: "lock",
-    },
-    {
-      id: "kelce-rec-solid",
-      player: "Travis Kelce",
-      team: "KC",
-      market: "Alt receptions",
-      line: "4.5 O",
-      odds: -600,
-      edge: 4.9,
-      confidence: "solid",
-    },
-  ],
-  nba: [
-    {
-      id: "curry-points-lock",
-      player: "Stephen Curry",
-      team: "GSW",
-      market: "Alt points",
-      line: "19.5 O",
-      odds: -550,
-      edge: 6.8,
-      confidence: "lock",
-    },
-    {
-      id: "tatum-pra-solid",
-      player: "Jayson Tatum",
-      team: "BOS",
-      market: "Alt PRA",
-      line: "24.5 O",
-      odds: -500,
-      edge: 5.3,
-      confidence: "solid",
-    },
-    {
-      id: "haliburton-assists-lock",
-      player: "Tyrese Haliburton",
-      team: "IND",
-      market: "Alt assists",
-      line: "6.5 O",
-      odds: -600,
-      edge: 7.1,
-      confidence: "lock",
-    },
-    {
-      id: "giannis-rebounds-solid",
-      player: "Giannis Antetokounmpo",
-      team: "MIL",
-      market: "Alt rebounds",
-      line: "7.5 O",
-      odds: -550,
-      edge: 4.7,
-      confidence: "solid",
-    },
-  ],
-};
+async function loadNFLGames(): Promise<Game[]> {
+  const res = await fetch("/api/nfl/games", { cache: "no-store" });
+  if (!res.ok) return [];
+  const raw = await res.json();
+  return raw.map((g: any) => ({
+    id: g.id,
+    homeTeam: g.homeTeam,
+    awayTeam: g.awayTeam,
+    commence: g.commence,
+  }));
+}
 
-function buildLadderSteps(sport: Sport): LadderStep[] {
-  const legs = MOCK_LADDER_LEGS[sport];
+async function loadNBAGames(): Promise<Game[]> {
+  const res = await fetch("/api/nba/games", { cache: "no-store" });
+  if (!res.ok) return [];
+  const raw = await res.json();
+  return raw.map((g: any) => ({
+    id: g.id,
+    homeTeam: g.homeTeam,
+    awayTeam: g.awayTeam,
+    commence: g.commence,
+  }));
+}
+
+async function loadNFLProps(gameId: string): Promise<PlayerProp[]> {
+  const res = await fetch(`/api/nfl/props?gameId=${gameId}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function loadNBAProps(gameId: string): Promise<PlayerProp[]> {
+  const res = await fetch(`/api/nba/props?gameId=${gameId}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+function formatTime(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function buildLadder(props: PlayerProp[]): LadderStep[] {
+  // Filter for -1000 to -500 legs (safer ladder legs)
+  const pool = props.filter((p) => p.odds <= -500 && p.odds >= -1000);
+
+  if (pool.length === 0) {
+    return BASE_LADDER_STAKES.map((tier) => ({
+      step: tier.step,
+      stake: tier.stake,
+      target: tier.target,
+      legs: [],
+    }));
+  }
 
   return BASE_LADDER_STAKES.map((tier, index) => {
-    // For now we just rotate through the legs to keep it simple.
-    const stepLegs: LadderLeg[] = [];
-
-    // Day 1–3: 3-leg safer ladders, after that 4-leg
-    const numLegs = index < 3 ? 3 : 4;
+    const legs: PlayerProp[] = [];
+    const numLegs = index < 3 ? 3 : 4; // early days 3 legs, later 4
 
     for (let i = 0; i < numLegs; i++) {
-      stepLegs.push(legs[(index + i) % legs.length]);
+      legs.push(pool[(index + i) % pool.length]);
     }
 
     return {
       step: tier.step,
       stake: tier.stake,
       target: tier.target,
-      legs: stepLegs,
+      legs,
     };
   });
 }
 
 export default function LadderChallengePage() {
   const [sport, setSport] = useState<Sport>("nfl");
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [games, setGames] = useState<Game[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState("");
+  const [ladder, setLadder] = useState<LadderStep[]>([]);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(true);
 
-  const steps = useMemo(() => buildLadderSteps(sport), [sport]);
-  const selected = steps.find((s) => s.step === currentStep) ?? steps[0];
+  useEffect(() => {
+    async function init() {
+      setLoading(true);
+      const loadedGames = sport === "nfl" ? await loadNFLGames() : await loadNBAGames();
+      setGames(loadedGames);
+      const firstId = loadedGames[0]?.id ?? "";
+      setSelectedGameId(firstId);
+      setLoading(false);
+    }
+    init();
+  }, [sport]);
+
+  useEffect(() => {
+    async function loadLadder() {
+      if (!selectedGameId) {
+        setLadder([]);
+        return;
+      }
+      setLoading(true);
+      const props =
+        sport === "nfl"
+          ? await loadNFLProps(selectedGameId)
+          : await loadNBAProps(selectedGameId);
+
+      const built = buildLadder(props);
+      setLadder(built);
+      setCurrentStep(1);
+      setLoading(false);
+    }
+    loadLadder();
+  }, [selectedGameId, sport]);
+
+  const selectedStep = useMemo(
+    () => ladder.find((s) => s.step === currentStep) ?? ladder[0],
+    [ladder, currentStep]
+  );
 
   const impliedTotalOdds = useMemo(() => {
-    // Rough combined odds estimate from legs
-    const decimal = selected.legs.reduce((acc, leg) => {
+    if (!selectedStep || selectedStep.legs.length === 0) {
+      return { decimal: 1, american: 0 };
+    }
+
+    const decimal = selectedStep.legs.reduce((acc, leg) => {
       const dec = leg.odds < 0 ? 1 + 100 / Math.abs(leg.odds) : 1 + leg.odds / 100;
       return acc * dec;
     }, 1);
@@ -164,7 +182,7 @@ export default function LadderChallengePage() {
       decimal >= 2 ? Math.round((decimal - 1) * 100) : Math.round(-100 / (decimal - 1));
 
     return { decimal, american };
-  }, [selected]);
+  }, [selectedStep]);
 
   return (
     <div className="space-y-6">
@@ -179,7 +197,8 @@ export default function LadderChallengePage() {
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">Ladder Challenge</h1>
           <p className="text-sm text-slate-400">
-            Structured bankroll climb using low-risk legs in the -500 to -1000 range.
+            Automatically builds a 9-day ladder using safer legs in the -500 to -1000 range from
+            live props.
           </p>
         </div>
 
@@ -203,122 +222,142 @@ export default function LadderChallengePage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[280px,minmax(0,1fr)] gap-6">
-        {/* Steps list */}
-        <div className="space-y-3">
-          <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
-            Ladder Steps
+      {/* Game selector */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <select
+            value={selectedGameId}
+            onChange={(e) => setSelectedGameId(e.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100"
+          >
+            {games.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.awayTeam} @ {g.homeTeam} · {formatTime(g.commence)}
+              </option>
+            ))}
+          </select>
+          <div className="text-xs text-slate-400">
+            Legs will be built from this game&apos;s live props.
           </div>
-          {steps.map((step) => {
-            const isActive = step.step === currentStep;
-            const roi = ((step.target - step.stake) / step.stake) * 100;
-
-            return (
-              <button
-                key={step.step}
-                onClick={() => setCurrentStep(step.step)}
-                className={`w-full text-left rounded-lg border px-3 py-3 text-sm ${
-                  isActive
-                    ? "border-sky-500 bg-slate-900/80"
-                    : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">Day {step.step}</div>
-                  <div className="text-xs text-slate-400">
-                    Stake ${step.stake.toFixed(0)} → Target ${step.target.toFixed(0)}
-                  </div>
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Approx. ROI: {roi.toFixed(0)}% · Legs: {step.legs.length}
-                </div>
-              </button>
-            );
-          })}
         </div>
 
-        {/* Step details */}
-        <div className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-slate-400">
-                  Current Step
-                </div>
-                <div className="text-lg font-semibold">
-                  Day {selected.step}: Stake ${selected.stake.toFixed(0)} → Target $
-                  {selected.target.toFixed(0)}
-                </div>
-              </div>
-              <div className="text-right text-xs text-slate-400">
-                Approx combined odds:{" "}
-                <div className="font-mono text-sm text-slate-100">
-                  {impliedTotalOdds.american > 0 ? "+" : ""}
-                  {impliedTotalOdds.american}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs uppercase tracking-wide text-slate-400">
-                Recommended Legs
-              </div>
-              <div className="text-xs text-slate-400">
-                Target range: -500 to -1000 per leg
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {selected.legs.map((leg) => (
-                <div
-                  key={leg.id}
-                  className="flex items-center justify-between rounded-lg bg-slate-900/70 px-3 py-2 text-sm"
-                >
-                  <div className="space-y-0.5">
-                    <div className="font-semibold">
-                      {leg.player} <span className="text-xs text-slate-400">({leg.team})</span>
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {leg.market} · {leg.line}
-                    </div>
-                  </div>
-                  <div className="text-right space-y-0.5">
-                    <div className="font-mono text-xs text-slate-100">
-                      {leg.odds > 0 ? "+" : ""}
-                      {leg.odds}
-                    </div>
-                    <div
-                      className={`text-xs ${
-                        leg.edge >= 6
-                          ? "text-emerald-400"
-                          : leg.edge >= 4
-                          ? "text-amber-400"
-                          : "text-slate-300"
-                      }`}
-                    >
-                      Edge {leg.edge.toFixed(1)}%
-                    </div>
-                    <div className="text-[10px] uppercase tracking-wide text-slate-400">
-                      {leg.confidence === "lock"
-                        ? "Lock"
-                        : leg.confidence === "solid"
-                        ? "Solid"
-                        : "Sprinkle"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-3 text-[11px] text-slate-500">
-              *Edge = model win probability minus market implied probability. A +7% edge means our
-              model thinks this leg wins 7 percentage points more often than the market is pricing in.
-            </p>
-          </div>
+        <div className="text-xs text-slate-500">
+          Legs filtered between -500 and -1000 odds.
         </div>
       </div>
+
+      {loading ? (
+        <div className="text-sm text-slate-400">Loading ladder from live props…</div>
+      ) : ladder.length === 0 ? (
+        <div className="text-sm text-slate-400">
+          No suitable ladder legs found yet for this game. Try a different matchup or sport.
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-[280px,minmax(0,1fr)] gap-6">
+          {/* Steps list */}
+          <div className="space-y-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
+              Ladder Steps
+            </div>
+            {ladder.map((step) => {
+              const isActive = step.step === currentStep;
+              const roi = ((step.target - step.stake) / step.stake) * 100;
+
+              return (
+                <button
+                  key={step.step}
+                  onClick={() => setCurrentStep(step.step)}
+                  className={`w-full text-left rounded-lg border px-3 py-3 text-sm ${
+                    isActive
+                      ? "border-sky-500 bg-slate-900/80"
+                      : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold">Day {step.step}</div>
+                    <div className="text-xs text-slate-400">
+                      Stake ${step.stake.toFixed(0)} → Target ${step.target.toFixed(0)}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Approx. ROI: {roi.toFixed(0)}% · Legs: {step.legs.length}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Step details */}
+          {selectedStep && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-slate-400">
+                      Current Step
+                    </div>
+                    <div className="text-lg font-semibold">
+                      Day {selectedStep.step}: Stake ${selectedStep.stake.toFixed(0)} → Target $
+                      {selectedStep.target.toFixed(0)}
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-slate-400">
+                    Approx combined odds:
+                    <div className="font-mono text-sm text-slate-100">
+                      {impliedTotalOdds.american > 0 ? "+" : ""}
+                      {impliedTotalOdds.american}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">
+                    Suggested Legs
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Drawn from live props for this game
+                  </div>
+                </div>
+
+                {selectedStep.legs.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No props in the -500 to -1000 window yet for this matchup.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedStep.legs.map((leg) => (
+                      <div
+                        key={leg.id}
+                        className="flex items-center justify-between rounded-lg bg-slate-900/70 px-3 py-2 text-sm"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="font-semibold">{leg.player}</div>
+                          <div className="text-xs text-slate-400">
+                            {leg.market.replace("player_", "").replace(/_/g, " ")}
+                            {leg.line !== null ? ` · ${leg.line}` : ""}
+                          </div>
+                          <div className="text-[11px] text-slate-500">{leg.game}</div>
+                        </div>
+                        <div className="text-right space-y-0.5 text-xs">
+                          <div className="font-mono text-slate-100">
+                            {leg.odds > 0 ? "+" : ""}
+                            {leg.odds}
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            Edge % from model coming soon
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
