@@ -68,22 +68,33 @@ export default function DashboardPage() {
   const games = sport === "nfl" ? nflGames : nbaGames;
 
   // AI Snapshot (simple odds-based version for now)
-  const aiSnapshot: SnapshotPick[] = useMemo(() => {
-    return games.slice(0, 3).flatMap((g) => {
-      const h2h = g.markets?.find((m: any) => m.key === "h2h");
-      if (!h2h || !h2h.outcomes?.length) return [];
-      const favorite = h2h.outcomes.reduce((best: any, o: any) =>
-        !best ? o : Math.abs(o.price) < Math.abs(best.price) ? o : best
-      );
-      return {
-        id: `${g.id}-${favorite.name}`,
-        team: favorite.name,
-        game: `${g.homeTeam} vs ${g.awayTeam}`,
-        market: "Moneyline",
-        odds: favorite.price,
-      };
-    });
-  }, [games]);
+ const aiSnapshot = useMemo(() => {
+  return games.slice(0, 3).flatMap((g) => {
+    const h2h = g.markets?.find((m: any) => m.key === "h2h");
+    if (!h2h || !h2h.outcomes?.length) return [];
+
+    const favorite = h2h.outcomes.reduce((best: any, o: any) =>
+      !best ? o : Math.abs(o.price) < Math.abs(best.price) ? o : best
+    );
+
+    // Convert bookmaker name to actual team name
+    const favoriteTeamFull =
+      favorite.name.toLowerCase().includes(g.homeTeam.toLowerCase())
+        ? g.homeTeam
+        : favorite.name.toLowerCase().includes(g.awayTeam.toLowerCase())
+        ? g.awayTeam
+        : favorite.name; // fallback
+
+    return {
+      id: `${g.id}-${favorite.name}`,
+      team: favorite.name, // bookmaker label
+      favoriteTeamFull, // correct team name
+      game: `${g.awayTeam} @ ${g.homeTeam}`,
+      market: "Moneyline",
+      odds: favorite.price,
+    };
+  });
+}, [games]);
 
   return (
     <div className="space-y-6">
@@ -255,3 +266,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
