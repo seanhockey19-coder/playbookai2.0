@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   { label: "🔥 Trending Props", href: "/dashboard/trending-props" }, // NEW
   { label: "⭐ Favorites", href: "/dashboard/favorites" },
   { label: "🔥 Hot Props", href: "/dashboard/hot-props" },
+  { label: "Value Finder", href: "/dashboard/value-finder" },
 ];
 
 function NavLink({ item }: { item: NavItem }) {
