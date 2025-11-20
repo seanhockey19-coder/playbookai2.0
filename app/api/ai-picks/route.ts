@@ -1,71 +1,79 @@
 // app/api/ai-picks/route.ts
 import { NextResponse } from "next/server";
+import { computeEdge } from "@/lib/edgeModel";
 
-type Sport = "nfl" | "nba";
+const API = process.env.ODDS_API_KEY;
 
-interface AIPick {
-  id: string;
-  sport: Sport;
-  gameId?: string;
-  player: string;
-  market: string;
-  line: number;
-  overOdds: number;
-  modelEdgePct: number;
-}
+export async function GET() {
+  if (!API) {
+    return NextResponse.json({ error: "Missing API key" }, { status: 500 });
+  }
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const sport = (searchParams.get("sport") as Sport) || "nfl";
-  const gameId = searchParams.get("gameId") || undefined;
+  const sports = [
+    { key: "nfl" as const, path: "americanfootball_nfl" },
+    { key: "nba" as const, path: "basketball_nba" },
+  ];
 
-  // TODO: replace this block with real model logic later
-  const picks: AIPick[] =
-    sport === "nfl"
-      ? [
-          {
-            id: "lamb-rec",
-            sport,
-            gameId,
-            player: "CeeDee Lamb",
-            market: "receptions",
-            line: 5.5,
-            overOdds: -145,
-            modelEdgePct: 7.2,
-          },
-          {
-            id: "adams-yds",
-            sport,
-            gameId,
-            player: "Davante Adams",
-            market: "receiving_yards",
-            line: 67.5,
-            overOdds: -135,
-            modelEdgePct: 5.1,
-          },
-        ]
-      : [
-          {
-            id: "curry-3pt",
-            sport,
-            gameId,
-            player: "Stephen Curry",
-            market: "threes_made",
-            line: 3.5,
-            overOdds: -150,
-            modelEdgePct: 6.4,
-          },
-          {
-            id: "tatum-pts",
-            sport,
-            gameId,
-            player: "Jayson Tatum",
-            market: "points",
-            line: 24.5,
-            overOdds: -140,
-            modelEdgePct: 4.3,
-          },
-        ];
+  let picks: any[] = [];
 
-  return NextResponse.json({ sport, gameId, picks });
+  for (const s of sports) {
+    const gamesRes = await fetch(
+      `https://api.the-odds-api.com/v4/sports/${s.path}/odds/?regions=us&markets=h2h&apiKey=${API}`,
+      { cache: "no-store" }
+    );
+
+    if (!gamesRes.ok) continue;
+    const games = await gamesRes.json();
+
+    // Limit work: sample first few games per sport
+    const sampleGames = games.slice(0, 4);
+
+    for (const g of sampleGames) {
+      const propsRes = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${s.path}/events/${g.id}/odds/?regions=us&markets=player_pass_yds,player_rush_yds,player_rec_yds,player_receptions,player_points,player_assists,player_rebounds,player_threes,player_anytime_td&apiKey=${API}`,
+        { cache: "no-store" }
+      );
+
+      if (!propsRes.ok) continue;
+      const event = await propsRes.json();
+      const markets = event.bookmakers?.[0]?.markets || [];
+
+      for (const m of markets) {
+        for (const o of m.outcomes) {
+          const edgeRes = computeEdge({
+            sport: s.key,
+            marketKey: m.key,
+            line: o.point ?? null,
+            odds: o.price,
+            player: o.description,
+            game: `${event.home_team} @ ${event.away_team}`,
+          });
+
+          // filter for decent favorite-ish odds (ladder-friendly style)
+          if (o.price <= -120 && o.price >= -900) {
+            picks.push({
+              id: `${event.id}-${m.key}-${o.description}`,
+              sport: s.key,
+              game: `${event.home_team} @ ${event.away_team}`,
+              player: o.description,
+              market: m.key,
+              line: o.point ?? null,
+              odds: o.price,
+              implied: edgeRes.impliedProb,
+              expected: edgeRes.modelProb,
+              edge: edgeRes.edge,
+              confidence: edgeRes.confidence,
+              notes: edgeRes.notes,
+              category: edgeRes.category,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Rank by edge & confidence
+  picks.sort((a, b) => b.edge - a.edge);
+
+  return NextResponse.json(picks.slice(0, 40));
 }
