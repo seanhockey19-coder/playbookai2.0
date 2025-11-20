@@ -1,31 +1,31 @@
-// app/api/nfl/games/route.ts
-
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
     const API = process.env.ODDS_API_KEY;
-    if (!API) return NextResponse.json({ error: "Missing ODDS_API_KEY" }, { status: 500 });
+    if (!API) {
+      return NextResponse.json({ error: "Missing API key" }, { status: 500 });
+    }
 
-    const url = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=h2h,spreads,totals&oddsFormat=american&apiKey=${API}`;
+    const res = await fetch(
+      `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=h2h&apiKey=${API}`,
+      { cache: "no-store" }
+    );
 
-    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("NFL API failed");
 
-    if (!res.ok)
-      return NextResponse.json({ error: `Odds API error: ${res.status}` }, { status: 500 });
+    const data = await res.json();
 
-    const games = await res.json();
-
-    const formatted = games.map((g: any) => ({
-      id: g.id,
-      homeTeam: g.home_team,
-      awayTeam: g.away_team,
-      commence: g.commence_time,
-      markets: g.bookmakers?.[0]?.markets || [],
+    const games = data.map((event: any) => ({
+      id: event.id,
+      homeTeam: event.home_team,
+      awayTeam: event.away_team,
+      commence: event.commence_time,
+      markets: event.bookmakers?.[0]?.markets || [],
     }));
 
-    return NextResponse.json(formatted);
-  } catch (err) {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json(games);
+  } catch (e) {
+    return NextResponse.json([], { status: 200 });
   }
 }
