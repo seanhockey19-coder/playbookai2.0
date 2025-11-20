@@ -1,325 +1,310 @@
+// app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
-import SportSwitcher from "./components/SportSwitcher";
+import Link from "next/link";
 
 type Sport = "nfl" | "nba";
 
 interface Game {
   id: string;
-  sport: Sport;
-  awayTeam: string;
   homeTeam: string;
-  projectedTotal?: number;
-  kickoff?: string;
+  awayTeam: string;
+  commence: string;
+  markets: any[];
 }
 
-// Fallback games
-const MOCK_GAMES: Record<Sport, Game[]> = {
-  nfl: [
-    {
-      id: "cowboys-raiders",
-      sport: "nfl",
-      awayTeam: "Dallas Cowboys",
-      homeTeam: "Las Vegas Raiders",
-      projectedTotal: 55.5,
-      kickoff: "Sun 4:25 PM ET",
-    },
-    {
-      id: "eagles-giants",
-      sport: "nfl",
-      awayTeam: "NY Giants",
-      homeTeam: "Philadelphia Eagles",
-      projectedTotal: 46.5,
-      kickoff: "Sun 1:00 PM ET",
-    },
-    {
-      id: "commanders-falcons",
-      sport: "nfl",
-      awayTeam: "Washington Commanders",
-      homeTeam: "Atlanta Falcons",
-      projectedTotal: 44,
-      kickoff: "Sun 1:00 PM ET",
-    },
-  ],
-  nba: [
-    {
-      id: "warriors-suns",
-      sport: "nba",
-      awayTeam: "Golden State Warriors",
-      homeTeam: "Phoenix Suns",
-      projectedTotal: 232.5,
-      kickoff: "10:00 PM ET",
-    },
-    {
-      id: "celtics-knicks",
-      sport: "nba",
-      awayTeam: "Boston Celtics",
-      homeTeam: "New York Knicks",
-      projectedTotal: 220.5,
-      kickoff: "7:30 PM ET",
-    },
-  ],
-};
+interface SnapshotPick {
+  id: string;
+  game: string;
+  team: string;
+  market: string;
+  odds: number;
+}
 
-// ---------- BASE STYLES ----------
-const pageShell: React.CSSProperties = {
-  minHeight: "100vh",
-  display: "flex",
-  background:
-    "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
-  color: "white",
-};
+async function loadNFLGames(): Promise<Game[]> {
+  const res = await fetch("/api/nfl/games", { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
 
-const sideNav: React.CSSProperties = {
-  width: "260px",
-  background:
-    "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(15,23,42,0.95))",
-  borderRight: "1px solid rgba(51,65,85,0.9)",
-  padding: "1.5rem 1.25rem",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-};
+async function loadNBAGames(): Promise<Game[]> {
+  const res = await fetch("/api/nba/games", { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
 
-const navItem: React.CSSProperties = {
-  padding: "0.55rem 0.75rem",
-  borderRadius: "0.9rem",
-  cursor: "pointer",
-  color: "rgba(209,213,219,0.9)",
-};
-
-const navItemActive: React.CSSProperties = {
-  ...navItem,
-  background: "linear-gradient(135deg,#3b82f6,#22c55e)",
-  color: "#0f172a",
-};
-
-const mainArea: React.CSSProperties = {
-  flex: 1,
-  padding: "1.75rem 2rem",
-  display: "flex",
-  flexDirection: "column",
-  gap: "1.25rem",
-};
-
-const cardBase: React.CSSProperties = {
-  borderRadius: "1.25rem",
-  background:
-    "radial-gradient(circle at top left, rgba(37,99,235,0.08), rgba(15,23,42,0.98))",
-  border: "1px solid rgba(148,163,184,0.35)",
-  padding: "1.25rem 1.4rem",
-};
-
-const subtleLabel: React.CSSProperties = {
-  fontSize: "0.75rem",
-  textTransform: "uppercase",
-  letterSpacing: "0.09em",
-  color: "rgba(148,163,184,0.9)",
-};
-
-// ----------------------------------------------------------
+function formatTime(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 export default function DashboardPage() {
-  const pathname = usePathname() ?? "";
   const [sport, setSport] = useState<Sport>("nfl");
-  const [games, setGames] = useState<Game[]>([]);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [nflGames, setNflGames] = useState<Game[]>([]);
+  const [nbaGames, setNbaGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const isActive = (route: string) =>
-    pathname.startsWith(route) ? navItemActive : navItem;
-
-  // Fetch games
+  // Load games when dashboard mounts
   useEffect(() => {
-    const list = MOCK_GAMES[sport];
-    setGames(list);
-    setSelectedGameId(list[0]?.id ?? null);
-    localStorage.setItem("activeSport", sport);
-  }, [sport]);
-
-  const selectedGame = useMemo(
-    () => games.find((g) => g.id === selectedGameId) ?? games[0] ?? null,
-    [games, selectedGameId]
-  );
-
-  const aiPicks = useMemo(() => {
-    if (sport === "nfl") {
-      return [
-        { label: "CeeDee Lamb o5.5 receptions", edge: "+7%" },
-        { label: "Davante Adams o67.5 yards", edge: "+5%" },
-      ];
+    async function loadAll() {
+      setLoading(true);
+      const [nfl, nba] = await Promise.all([loadNFLGames(), loadNBAGames()]);
+      setNflGames(nfl);
+      setNbaGames(nba);
+      setLoading(false);
     }
+    loadAll();
+  }, []);
 
-    return [
-      { label: "Steph Curry o3.5 threes", edge: "+6%" },
-      { label: "Jayson Tatum o24.5 points", edge: "+4%" },
-    ];
-  }, [sport]);
+  const games = sport === "nfl" ? nflGames : nbaGames;
+
+  // Simple “AI snapshot” – takes favorite moneyline side from first few games
+  const aiSnapshot: SnapshotPick[] = useMemo(() => {
+    return games.slice(0, 3).flatMap((g) => {
+      const h2h = g.markets?.find((m: any) => m.key === "h2h");
+      if (!h2h) return [];
+      const outcomes = h2h.outcomes || [];
+      if (!outcomes.length) return [];
+      // Pick the shorter-odds favorite as the “safer” AI lean
+      const favorite = outcomes.reduce((best: any, o: any) =>
+        !best ? o : Math.abs(o.price) < Math.abs(best.price) ? o : best
+      );
+      return {
+        id: `${g.id}-${favorite.name}`,
+        game: `${g.homeTeam} vs ${g.awayTeam}`,
+        team: favorite.name,
+        market: "Moneyline",
+        odds: favorite.price,
+      };
+    });
+  }, [games]);
 
   return (
-    <div style={pageShell}>
-      {/* SIDEBAR */}
-      <aside style={sideNav}>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <div style={{ marginBottom: "2rem" }}>
-            <div
-              style={{ fontSize: "0.8rem", color: "rgba(148,163,184,0.9)" }}
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-slate-400">
+            Live NFL & NBA slate with a quick AI-style snapshot built from live odds.
+          </p>
+        </div>
+
+        <div className="inline-flex items-center rounded-full bg-slate-900 p-1 text-xs font-medium">
+          <button
+            onClick={() => setSport("nfl")}
+            className={`px-3 py-1 rounded-full ${
+              sport === "nfl" ? "bg-sky-600 text-white" : "text-slate-300"
+            }`}
+          >
+            NFL
+          </button>
+          <button
+            onClick={() => setSport("nba")}
+            className={`px-3 py-1 rounded-full ${
+              sport === "nba" ? "bg-emerald-500 text-white" : "text-slate-300"
+            }`}
+          >
+            NBA
+          </button>
+        </div>
+      </div>
+
+      {/* Top row: AI snapshot + quick links */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
+        {/* AI snapshot card */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">
+                AI Picks Snapshot (Odds-Driven)
+              </div>
+              <div className="text-sm text-slate-300">
+                Early leans based on current moneyline favorites.
+              </div>
+            </div>
+            <Link
+              href="/dashboard/ai-picks"
+              className="text-xs text-sky-400 hover:text-sky-300"
             >
-              Coaches
-            </div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-              PlaybookAI
-            </div>
+              View full AI picks →
+            </Link>
           </div>
 
-          <nav
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.35rem",
-            }}
-          >
-            <div
-              style={isActive("/dashboard")}
-              onClick={() => (window.location.href = "/dashboard")}
-            >
-              Dashboard
+          {loading && (
+            <div className="text-sm text-slate-400">Loading live odds…</div>
+          )}
+
+          {!loading && aiSnapshot.length === 0 && (
+            <div className="text-sm text-slate-400">
+              No games available yet for this sport.
             </div>
+          )}
 
-            <div
-              style={isActive("/ai-picks")}
-              onClick={() => (window.location.href = "/ai-picks")}
-            >
-              AI Picks
-            </div>
-
-            <div
-              style={isActive("/ladder")}
-              onClick={() => (window.location.href = "/ladder")}
-            >
-              Ladder Challenge
-            </div>
-
-            <div
-              style={isActive("/game-breakdown")}
-              onClick={() => {
-                if (selectedGame) {
-                  localStorage.setItem(
-                    "selectedGame",
-                    JSON.stringify(selectedGame)
-                  );
-                }
-                window.location.href = "/game-breakdown";
-              }}
-            >
-              Game Breakdown
-            </div>
-
-            <div
-              style={isActive("/props")}
-              onClick={() => (window.location.href = "/props")}
-            >
-              Player Props
-            </div>
-          </nav>
-        </div>
-
-        <div
-          style={{
-            fontSize: "0.75rem",
-            color: "rgba(148,163,184,0.9)",
-            borderTop: "1px solid rgba(30,64,175,0.7)",
-            paddingTop: "0.75rem",
-            marginTop: "1rem",
-          }}
-        >
-          Alpha build · internal only
-        </div>
-      </aside>
-
-      {/* MAIN AREA */}
-      <main style={mainArea}>
-        {/* HEADER ----------------------- */}
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <div>
-            <div style={subtleLabel}>
-              Live matchup insights + AI projections
-            </div>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-              {sport.toUpperCase()} Dashboard
-            </h1>
-          </div>
-
-          <SportSwitcher sport={sport} onChange={setSport} />
-        </div>
-
-        {/* GAME DROPDOWN ---------------- */}
-        <section style={cardBase}>
-          <div style={subtleLabel}>Game</div>
-
-          <select
-            style={{
-              width: "100%",
-              maxWidth: "480px",
-              padding: "0.55rem 0.75rem",
-              borderRadius: "0.85rem",
-              backgroundColor: "rgba(15,23,42,0.95)",
-              color: "white",
-              border: "1px solid rgba(148,163,184,0.45)",
-              fontSize: "0.95rem",
-            }}
-            value={selectedGameId ?? ""}
-            onChange={(e) => setSelectedGameId(e.target.value)}
-          >
-            {games.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.awayTeam} @ {g.homeTeam} · {g.kickoff}
-              </option>
-            ))}
-          </select>
-        </section>
-
-        {/* GRID CONTENT ---------------- */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0,2.5fr) minmax(0,1.7fr)",
-            gap: "1.25rem",
-          }}
-        >
-          {/* GAME BREAKDOWN PANEL */}
-          <section style={cardBase}>
-            <div style={subtleLabel}>Game Breakdown</div>
-            <p style={{ opacity: 0.7 }}>
-              Detailed breakdown is available in the Game Breakdown page.
-            </p>
-          </section>
-
-          {/* AI PICKS SNAPSHOT */}
-          <section style={cardBase}>
-            <div style={subtleLabel}>AI Picks Snapshot</div>
-
-            {aiPicks.map((p) => (
+          <div className="space-y-2">
+            {aiSnapshot.map((pick) => (
               <div
-                key={p.label}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "0.5rem",
-                  fontSize: "0.85rem", // FIXED
-                }}
+                key={pick.id}
+                className="flex items-center justify-between rounded-lg bg-slate-900/80 px-3 py-2 text-sm"
               >
-                <span>{p.label}</span>
-                <span style={{ color: "#22c55e", fontWeight: 600 }}>
-                  {p.edge}
-                </span>
+                <div>
+                  <div className="font-semibold">{pick.team}</div>
+                  <div className="text-xs text-slate-400">{pick.game}</div>
+                </div>
+                <div className="text-right text-xs">
+                  <div className="font-mono text-slate-100">
+                    {pick.odds > 0 ? "+" : ""}
+                    {pick.odds}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    Favorite via live moneyline
+                  </div>
+                </div>
               </div>
             ))}
-          </section>
+          </div>
+
+          <p className="mt-3 text-[11px] text-slate-500">
+            This is a simple odds-based preview. Once your full model is ready,
+            this card will use true model edges (like the +7% edge we talked about).
+          </p>
         </div>
-      </main>
+
+        {/* Quick nav */}
+        <div className="space-y-3">
+          <div className="text-xs uppercase tracking-wide text-slate-400">
+            Quick Navigation
+          </div>
+          <Link
+            href="/dashboard/player-props"
+            className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
+          >
+            <div className="font-semibold">Player Props Scanner</div>
+            <div className="text-xs text-slate-400">
+              Browse live props by game and filter by player or market.
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/ladder-challenge"
+            className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
+          >
+            <div className="font-semibold">Ladder Challenge</div>
+            <div className="text-xs text-slate-400">
+              Build low-risk ladders from live props in the -500 to -1000 range.
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/game-breakdown"
+            className="block rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm hover:border-sky-600"
+          >
+            <div className="font-semibold">Game Breakdown</div>
+            <div className="text-xs text-slate-400">
+              Dive into spreads, totals, and props for a single matchup.
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Live slate table */}
+      <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs uppercase tracking-wide text-slate-400">
+            Live {sport.toUpperCase()} Slate
+          </div>
+          <div className="text-xs text-slate-500">
+            {games.length} game{games.length === 1 ? "" : "s"} loaded from Odds API
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-sm text-slate-400">Loading games…</div>
+        ) : games.length === 0 ? (
+          <div className="text-sm text-slate-400">
+            No active games for this sport right now.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {games.map((g) => {
+              const h2h = g.markets?.find((m: any) => m.key === "h2h");
+              const spreads = g.markets?.find((m: any) => m.key === "spreads");
+              const total = g.markets?.find((m: any) => m.key === "totals");
+
+              return (
+                <div
+                  key={g.id}
+                  className="rounded-lg bg-slate-900/80 px-3 py-2 text-sm flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div className="font-semibold">
+                      {g.awayTeam} @ {g.homeTeam}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {formatTime(g.commence)}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-300">
+                    {h2h && (
+                      <div>
+                        <div className="text-[10px] uppercase text-slate-500">
+                          Moneyline
+                        </div>
+                        <div className="flex gap-2">
+                          {h2h.outcomes?.map((o: any) => (
+                            <div key={o.name} className="font-mono">
+                              {o.name}: {o.price > 0 ? "+" : ""}
+                              {o.price}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {spreads && (
+                      <div>
+                        <div className="text-[10px] uppercase text-slate-500">
+                          Spread
+                        </div>
+                        <div className="flex gap-2">
+                          {spreads.outcomes?.map((o: any) => (
+                            <div key={o.name} className="font-mono">
+                              {o.name}: {o.point} ({o.price > 0 ? "+" : ""}
+                              {o.price})
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {total && (
+                      <div>
+                        <div className="text-[10px] uppercase text-slate-500">
+                          Total
+                        </div>
+                        <div className="flex gap-2">
+                          {total.outcomes?.map((o: any) => (
+                            <div key={o.name} className="font-mono">
+                              {o.name}: {o.point} ({o.price > 0 ? "+" : ""}
+                              {o.price})
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
