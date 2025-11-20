@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 export default function GameBreakdownPage() {
   const [game, setGame] = useState<any>(null);
 
-  // Load a selected game from localStorage (set by dashboard)
+  // Load selected game from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("selectedGame");
     if (stored) setGame(JSON.parse(stored));
   }, []);
 
+  // If no game selected, show fallback UI
   if (!game) {
     return (
       <div
@@ -19,24 +20,63 @@ export default function GameBreakdownPage() {
           color: "white",
           fontFamily:
             '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif',
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
         }}
       >
+        <button
+          onClick={() => (window.location.href = "/dashboard")}
+          style={{
+            padding: "0.5rem 1rem",
+            borderRadius: "999px",
+            background: "linear-gradient(135deg,#3b82f6,#22c55e)",
+            color: "#0f172a",
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer",
+            marginBottom: "1.5rem",
+          }}
+        >
+          ← Back to Dashboard
+        </button>
+
         No game selected.
       </div>
     );
   }
 
+  // FULL GAME BREAKDOWN PAGE
   return (
     <div
       style={{
         minHeight: "100vh",
         padding: "2rem",
-        background: "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
+        background:
+          "radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%)",
         color: "white",
         fontFamily:
           '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif',
       }}
     >
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => (window.location.href = "/dashboard")}
+        style={{
+          padding: "0.5rem 1rem",
+          borderRadius: "999px",
+          background: "linear-gradient(135deg,#3b82f6,#22c55e)",
+          color: "#0f172a",
+          fontWeight: 600,
+          border: "none",
+          cursor: "pointer",
+          marginBottom: "1.5rem",
+        }}
+      >
+        ← Back to Dashboard
+      </button>
+
+      {/* HEADER */}
       <h1
         style={{
           fontSize: "1.75rem",
@@ -80,12 +120,7 @@ export default function GameBreakdownPage() {
           }}
         >
           <div>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "rgba(148,163,184,0.8)",
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.8)" }}>
               Away
             </div>
             <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
@@ -94,12 +129,7 @@ export default function GameBreakdownPage() {
           </div>
 
           <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "rgba(148,163,184,0.8)",
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.8)" }}>
               Projected Total
             </div>
             <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>
@@ -108,12 +138,7 @@ export default function GameBreakdownPage() {
           </div>
 
           <div style={{ textAlign: "right" }}>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "rgba(148,163,184,0.8)",
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.8)" }}>
               Home
             </div>
             <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
@@ -122,14 +147,10 @@ export default function GameBreakdownPage() {
           </div>
         </div>
 
-        {/* WIN PROBABILITY */}
+        {/* WIN PROBABILITY BAR */}
         <div style={{ marginBottom: "1.75rem" }}>
           <div
-            style={{
-              fontSize: "0.75rem",
-              color: "rgba(148,163,184,0.95)",
-              marginBottom: "0.35rem",
-            }}
+            style={{ fontSize: "0.75rem", color: "rgba(148,163,184,0.95)" }}
           >
             Win Probability
           </div>
@@ -140,6 +161,7 @@ export default function GameBreakdownPage() {
               height: "18px",
               borderRadius: "999px",
               overflow: "hidden",
+              marginTop: "0.35rem",
               display: "flex",
             }}
           >
@@ -147,7 +169,6 @@ export default function GameBreakdownPage() {
               style={{
                 width: "62%",
                 background: "linear-gradient(90deg,#3b82f6,#22c55e)",
-                transition: "width 0.3s ease",
               }}
             />
             <div style={{ flex: 1 }} />
@@ -155,9 +176,9 @@ export default function GameBreakdownPage() {
 
           <div
             style={{
+              marginTop: "0.4rem",
               display: "flex",
               justifyContent: "space-between",
-              marginTop: "0.4rem",
               fontSize: "0.8rem",
               color: "rgba(148,163,184,0.9)",
             }}
@@ -167,7 +188,7 @@ export default function GameBreakdownPage() {
           </div>
         </div>
 
-        {/* OFFENSE + DEFENSE */}
+        {/* OFFENSE / DEFENSE GRID */}
         <div
           style={{
             display: "grid",
@@ -175,7 +196,7 @@ export default function GameBreakdownPage() {
             gap: "1.5rem",
           }}
         >
-          {/* Offense */}
+          {/* OFFENSE */}
           <div>
             <div
               style={{
@@ -194,7 +215,7 @@ export default function GameBreakdownPage() {
             </ul>
           </div>
 
-          {/* Defense */}
+          {/* DEFENSE */}
           <div>
             <div
               style={{
@@ -225,12 +246,7 @@ export default function GameBreakdownPage() {
           >
             Weather / Conditions
           </div>
-          <div
-            style={{
-              fontSize: "0.9rem",
-              color: "rgba(148,163,184,0.95)",
-            }}
-          >
+          <div style={{ fontSize: "0.9rem", color: "rgba(148,163,184,0.95)" }}>
             Dome · Controlled environment · No weather impact.
           </div>
         </div>
@@ -253,10 +269,9 @@ export default function GameBreakdownPage() {
               lineHeight: 1.55,
             }}
           >
-            Our model expects a pass-heavy script with measurable edges in
-            passing efficiency and defensive pressure. The matchup trends
-            strongly toward a fast-paced, high-scoring environment where early
-            down success will decide momentum.
+            Our model expects a pass-heavy script with measurable advantages in
+            passing efficiency, explosive play rate, and pressure rate. The
+            matchup strongly favors early-down aggression and a faster pace.
           </p>
         </div>
       </section>
