@@ -71,6 +71,11 @@ export default function GameBreakdownPage() {
   const [props, setProps] = useState<PlayerProp[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // GAME SCRIPT STATE
+  const [script, setScript] = useState<any>(null);
+  const [scriptLoading, setScriptLoading] = useState(true);
+
+  // Load games when sport changes
   useEffect(() => {
     async function init() {
       setLoading(true);
@@ -83,9 +88,11 @@ export default function GameBreakdownPage() {
     init();
   }, [sport]);
 
+  // Load selected game + props
   useEffect(() => {
     async function loadDetails() {
       if (!selectedGameId) return;
+
       const game = games.find((g) => g.id === selectedGameId) ?? null;
       setSelectedGame(game);
       if (!game) return;
@@ -99,6 +106,27 @@ export default function GameBreakdownPage() {
     }
     loadDetails();
   }, [selectedGameId, games, sport]);
+
+  // Load GAME SCRIPT AI
+  useEffect(() => {
+    async function loadScript() {
+      if (!selectedGameId) return;
+      setScriptLoading(true);
+
+      const res = await fetch(
+        `/api/game-script?gameId=${selectedGameId}&sport=${sport}`,
+        { cache: "no-store" }
+      );
+
+      if (res.ok) {
+        setScript(await res.json());
+      }
+
+      setScriptLoading(false);
+    }
+
+    loadScript();
+  }, [selectedGameId, sport]);
 
   const h2h = selectedGame?.markets?.find((m: any) => m.key === "h2h");
   const spreads = selectedGame?.markets?.find((m: any) => m.key === "spreads");
@@ -168,12 +196,15 @@ export default function GameBreakdownPage() {
         </div>
       </div>
 
-      {/* Odds + props */}
+      {/* Odds + Game Script + Props */}
       {loading || !selectedGame ? (
         <div className="text-sm text-slate-400">Loading game data…</div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr),minmax(0,1.6fr)]">
-          {/* Odds summary */}
+
+          {/* ----------------------------- */}
+          {/* LEFT COLUMN: ODDS */}
+          {/* ----------------------------- */}
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
               <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">
@@ -230,16 +261,65 @@ export default function GameBreakdownPage() {
                   </div>
                 </div>
               )}
-
-              {!h2h && !spreads && !totals && (
-                <div className="text-sm text-slate-400">
-                  No lines available yet for this game.
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Props list */}
+          {/* ----------------------------- */}
+          {/* MIDDLE COLUMN: GAME SCRIPT AI */}
+          {/* ----------------------------- */}
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-3">
+            <h2 className="text-lg font-semibold">Game Script AI</h2>
+
+            {scriptLoading ? (
+              <div className="text-slate-400 text-sm">Analyzing matchup…</div>
+            ) : (
+              <>
+                <div className="text-sm text-slate-300">
+                  {script.summary}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs text-slate-400">
+                  <div>
+                    <p className="font-semibold text-slate-200">Pace Score</p>
+                    <p>{script.paceScore}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-200">Home Offense</p>
+                    <p>{script.offenseRatingHome}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-200">Away Offense</p>
+                    <p>{script.offenseRatingAway}</p>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-slate-200">Home Pass/Run</p>
+                    <p>{script.passRunSplitHome.pass}% pass / {script.passRunSplitHome.run}% run</p>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-slate-200">Away Pass/Run</p>
+                    <p>{script.passRunSplitAway.pass}% pass / {script.passRunSplitAway.run}% run</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-200 text-sm mb-1">
+                    Usage Boosts
+                  </p>
+                  <ul className="list-disc list-inside text-xs text-slate-400">
+                    {script.usageBoosts.map((b: string, idx: number) => (
+                      <li key={idx}>{b}</li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ----------------------------- */}
+          {/* RIGHT COLUMN: PROPS */}
+          {/* ----------------------------- */}
           <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="text-xs uppercase tracking-wide text-slate-400">
