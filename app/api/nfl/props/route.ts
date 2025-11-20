@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
 
+interface ApiProp {
+  id: string;
+  sport: "nfl";
+  player: string;
+  team: string;
+  market: string;
+  line: number | null;
+  odds: number;
+  game: string;
+}
+
 export async function GET(req: Request) {
   try {
     const API = process.env.ODDS_API_KEY;
-    if (!API) return NextResponse.json({ error: "Missing key" }, { status: 500 });
+    if (!API) {
+      return NextResponse.json({ error: "Missing key" }, { status: 500 });
+    }
 
     const { searchParams } = new URL(req.url);
     const gameId = searchParams.get("gameId");
-    if (!gameId) return NextResponse.json([]);
+    if (!gameId) return NextResponse.json<ApiProp[]>([]);
 
     const MARKETS =
       "player_pass_yds,player_rush_yds,player_rec_yds,player_receptions,player_anytime_td";
@@ -21,7 +34,7 @@ export async function GET(req: Request) {
 
     const markets = event.bookmakers?.[0]?.markets || [];
 
-    const props = [];
+    const props: ApiProp[] = [];
 
     for (const m of markets) {
       for (const o of m.outcomes) {
@@ -29,7 +42,7 @@ export async function GET(req: Request) {
           id: `${event.id}-${m.key}-${o.description}`,
           sport: "nfl",
           player: o.description,
-          team: "", // Odds API doesn't send team directly
+          team: "",
           market: m.key,
           line: o.point ?? null,
           odds: o.price,
@@ -40,6 +53,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json(props);
   } catch (err) {
-    return NextResponse.json([]);
+    return NextResponse.json<ApiProp[]>([]);
   }
 }
