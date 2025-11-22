@@ -12,6 +12,18 @@ const nextConfig = {
       },
     ],
   },
+
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["*"],
+    },
+  },
+
+  env: {
+    ODDS_API_KEY: process.env.ODDS_API_KEY,
+  },
 };
 
 module.exports = nextConfig;
+
+
