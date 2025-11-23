@@ -1,24 +1,50 @@
 // lib/sportsdata.ts
-const BASE_URL = "https://api.sportsdata.io/v3/nfl/stats/json";
+// Thin wrapper around SportsData.io NFL STATS API
+// Make sure you set SPORTSDATA_API_KEY in Vercel
+
+const BASE_URL = "https://api.sportsdata.io/v3/nfl";
 
 const API_KEY = process.env.SPORTSDATA_API_KEY;
 
 if (!API_KEY) {
-  console.warn("SPORTSDATA_API_KEY is not set");
+  console.warn("SPORTSDATA_API_KEY is not set. SportsData.io calls will fail.");
 }
 
-async function sdFetch<T>(path: string): Promise<T> {
-  const url = `${BASE_URL}${path}?key=${API_KEY}`;
+async function sdFetch<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+  const url = new URL(`${BASE_URL}${path}`);
 
-  const res = await fetch(url, { next: { revalidate: 60 } }); // Next.js caching
+  // SportsData.io supports either query ?key= or header Ocp-Apim-Subscription-Key
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  url.searchParams.set("key", API_KEY || "");
+
+  const res = await fetch(url.toString(), {
+    // Next.js: cache for up to 60s by default, tweak as needed
+    next: { revalidate: 60 },
+  });
+
   if (!res.ok) {
-    console.error("SportsData.io error", res.status, url);
-    throw new Error(`SportsData.io error: ${res.status}`);
+    const text = await res.text();
+    console.error("SportsData.io error", res.status, url.toString(), text);
+    throw new Error(`SportsData.io error ${res.status}: ${text}`);
   }
+
   return res.json() as Promise<T>;
 }
 
-// Types are simplified; you can refine from SportsData.io docs
+/**
+ * Basic player shape from SportsData.io (simplified)
+ */
+export interface Player {
+  PlayerID: number;
+  Team: string | null;
+  Name: string;
+  Position: string | null;
+  Status?: string | null;
+}
+
+/**
+ * PlayerGame stats (simplified)
+ */
 export interface PlayerGame {
   GameKey: string;
   Season: number;
@@ -29,38 +55,70 @@ export interface PlayerGame {
   PlayerID: number;
   Name: string;
   Position: string;
-  RushingAttempts?: number;
-  RushingYards?: number;
-  ReceivingTargets?: number;
-  ReceivingYards?: number;
-  PassingAttempts?: number;
-  PassingYards?: number;
-  // ... add fields as needed
+
+  RushingAttempts?: number | null;
+  RushingYards?: number | null;
+  ReceivingTargets?: number | null;
+  ReceivingYards?: number | null;
+  PassingAttempts?: number | null;
+  PassingYards?: number | null;
 }
 
-export async function getPlayerGamesBySeason(
-  season: number,
-  playerId: number
-): Promise<PlayerGame[]> {
-  // Check docs for exact endpoint; adjust path if needed
-  const path = `/PlayerGameStatsByPlayerID/${season}/${playerId}`;
-  return sdFetch<PlayerGame[]>(path);
-}
-
+/**
+ * TeamGame stats (simplified – used for matchup context)
+ */
 export interface TeamGame {
+  GameKey: string;
   Season: number;
+  SeasonType: number;
   Week: number;
   Team: string;
   Opponent: string;
-  RushingYards?: number;
-  PassingYards?: number;
-  // etc.
+  RushingYards?: number | null;
+  PassingYards?: number | null;
 }
 
-export async function getTeamGamesByWeek(
+export interface Timeframe {
+  Season: number;
+  SeasonType: string; // "Regular"
+  Week: number;
+  Type: string; // "Current", "Upcoming", etc.
+}
+
+/**
+ * All active players
+ * /v3/nfl/scores/json/Players
+ */
+export async function getActivePlayers(): Promise<Player[]> {
+  return sdFetch<Player[]>("/scores/json/Players");
+}
+
+/**
+ * Player game stats for a season
+ * /v3/nfl/stats/json/PlayerGameStatsByPlayerID/{season}/{playerId}
+ */
+export async function getPlayerGameStatsByPlayer(
+  season: number,
+  playerId: number
+): Promise<PlayerGame[]> {
+  return sdFetch<PlayerGame[]>(`/stats/json/PlayerGameStatsByPlayerID/${season}/${playerId}`);
+}
+
+/**
+ * Team game stats by week (for matchup context)
+ * /v3/nfl/stats/json/TeamGameStatsByWeek/{season}/{week}
+ */
+export async function getTeamGameStatsByWeek(
   season: number,
   week: number
 ): Promise<TeamGame[]> {
-  const path = `/TeamGameStatsByWeek/${season}/${week}`;
-  return sdFetch<TeamGame[]>(path);
+  return sdFetch<TeamGame[]>(`/stats/json/TeamGameStatsByWeek/${season}/${week}`);
+}
+
+/**
+ * Timeframes – to know current season + week dynamically
+ * /v3/nfl/scores/json/Timeframes/current
+ */
+export async function getCurrentTimeframe(): Promise<Timeframe[]> {
+  return sdFetch<Timeframe[]>("/scores/json/Timeframes/current");
 }
